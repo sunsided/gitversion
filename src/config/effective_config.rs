@@ -114,4 +114,130 @@ mod tests {
         assert!(effective.is_main_branch);
         assert_eq!(effective.pre_release_weight, 99);
     }
+
+    #[test]
+    fn from_uses_type_defaults_when_branch_and_defaults_are_empty() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration::default();
+
+        let effective = EffectiveConfiguration::from(&config, &BranchConfiguration::default());
+
+        assert_eq!(effective.deployment_mode, DeploymentMode::ManualDeployment);
+        assert_eq!(effective.label, "");
+        assert_eq!(effective.increment, IncrementStrategy::None);
+        assert!(!effective.track_merge_target);
+        assert!(effective.track_merge_message);
+        assert_eq!(
+            effective.commit_message_incrementing,
+            CommitMessageIncrementMode::Enabled
+        );
+        assert!(!effective.tracks_release_branches);
+        assert!(!effective.is_release_branch);
+        assert!(!effective.is_main_branch);
+        assert_eq!(effective.pre_release_weight, 0);
+    }
+
+    #[test]
+    fn from_inherits_missing_branch_fields_from_defaults() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            deployment_mode: Some(DeploymentMode::ContinuousDelivery),
+            label: Some("fallback".to_string()),
+            increment: Some(IncrementStrategy::Minor),
+            track_merge_target: Some(true),
+            track_merge_message: Some(false),
+            commit_message_incrementing: Some(CommitMessageIncrementMode::Disabled),
+            tracks_release_branches: Some(true),
+            is_release_branch: Some(true),
+            is_main_branch: Some(false),
+            pre_release_weight: Some(8),
+            ..Default::default()
+        };
+        let branch = BranchConfiguration {
+            label: Some("custom".to_string()),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &branch);
+
+        assert_eq!(
+            effective.deployment_mode,
+            DeploymentMode::ContinuousDelivery
+        );
+        assert_eq!(effective.label, "custom");
+        assert_eq!(effective.increment, IncrementStrategy::Minor);
+        assert!(effective.track_merge_target);
+        assert!(!effective.track_merge_message);
+        assert_eq!(
+            effective.commit_message_incrementing,
+            CommitMessageIncrementMode::Disabled
+        );
+        assert!(effective.tracks_release_branches);
+        assert!(effective.is_release_branch);
+        assert!(!effective.is_main_branch);
+        assert_eq!(effective.pre_release_weight, 8);
+    }
+
+    #[test]
+    fn from_respects_explicit_false_values_from_branch() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            track_merge_target: Some(true),
+            track_merge_message: Some(true),
+            tracks_release_branches: Some(true),
+            is_release_branch: Some(true),
+            is_main_branch: Some(true),
+            ..Default::default()
+        };
+        let branch = BranchConfiguration {
+            track_merge_target: Some(false),
+            track_merge_message: Some(false),
+            tracks_release_branches: Some(false),
+            is_release_branch: Some(false),
+            is_main_branch: Some(false),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &branch);
+
+        assert!(!effective.track_merge_target);
+        assert!(!effective.track_merge_message);
+        assert!(!effective.tracks_release_branches);
+        assert!(!effective.is_release_branch);
+        assert!(!effective.is_main_branch);
+    }
+
+    #[test]
+    fn from_respects_explicit_zero_pre_release_weight() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            pre_release_weight: Some(99),
+            ..Default::default()
+        };
+        let branch = BranchConfiguration {
+            pre_release_weight: Some(0),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &branch);
+
+        assert_eq!(effective.pre_release_weight, 0);
+    }
+
+    #[test]
+    fn from_prefers_empty_branch_label_over_default_label() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            label: Some("default-label".to_string()),
+            ..Default::default()
+        };
+        let branch = BranchConfiguration {
+            label: Some(String::new()),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &branch);
+
+        assert_eq!(effective.label, "");
+    }
 }

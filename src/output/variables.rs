@@ -167,4 +167,134 @@ mod tests {
         let unique: HashSet<&str> = keys.into_iter().collect();
         assert_eq!(unique.len(), GitVersionVariables::AVAILABLE_VARIABLES.len());
     }
+
+    #[test]
+    fn available_variables_has_expected_count_and_boundaries() {
+        assert_eq!(GitVersionVariables::AVAILABLE_VARIABLES.len(), 27);
+        assert_eq!(
+            GitVersionVariables::AVAILABLE_VARIABLES.first(),
+            Some(&"Major")
+        );
+        assert_eq!(
+            GitVersionVariables::AVAILABLE_VARIABLES.last(),
+            Some(&"AssemblySemFileVer")
+        );
+    }
+
+    #[test]
+    fn get_is_case_sensitive() {
+        let vars = GitVersionVariables {
+            major: "7".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("Major"), Some("7"));
+        assert_eq!(vars.get("major"), None);
+    }
+
+    #[test]
+    fn get_returns_none_for_near_miss_names() {
+        let vars = GitVersionVariables::default();
+
+        assert_eq!(vars.get("Major "), None);
+        assert_eq!(vars.get(" BranchName"), None);
+        assert_eq!(vars.get("VersionSourceSemver"), None);
+    }
+
+    #[test]
+    fn get_returns_expected_core_semver_fields() {
+        let vars = GitVersionVariables {
+            minor: "8".to_string(),
+            patch: "9".to_string(),
+            sem_ver: "1.8.9-beta.1".to_string(),
+            full_sem_ver: "1.8.9-beta.1+3.main.abcdef0".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("Minor"), Some("8"));
+        assert_eq!(vars.get("Patch"), Some("9"));
+        assert_eq!(vars.get("SemVer"), Some("1.8.9-beta.1"));
+        assert_eq!(vars.get("FullSemVer"), Some("1.8.9-beta.1+3.main.abcdef0"));
+    }
+
+    #[test]
+    fn get_returns_expected_pre_release_fields() {
+        let vars = GitVersionVariables {
+            pre_release_tag: "beta.2".to_string(),
+            pre_release_tag_with_dash: "-beta.2".to_string(),
+            pre_release_label: "beta".to_string(),
+            pre_release_label_with_dash: "-beta".to_string(),
+            pre_release_number: "2".to_string(),
+            weighted_pre_release_number: "60002".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("PreReleaseTag"), Some("beta.2"));
+        assert_eq!(vars.get("PreReleaseTagWithDash"), Some("-beta.2"));
+        assert_eq!(vars.get("PreReleaseLabel"), Some("beta"));
+        assert_eq!(vars.get("PreReleaseLabelWithDash"), Some("-beta"));
+        assert_eq!(vars.get("PreReleaseNumber"), Some("2"));
+        assert_eq!(vars.get("WeightedPreReleaseNumber"), Some("60002"));
+    }
+
+    #[test]
+    fn get_returns_expected_build_and_branch_fields() {
+        let vars = GitVersionVariables {
+            build_meta_data: "5.feature/api.abc123".to_string(),
+            full_build_meta_data: "5.feature/api.abc123".to_string(),
+            major_minor_patch: "2.3.4".to_string(),
+            branch_name: "feature/api".to_string(),
+            escaped_branch_name: "feature-api".to_string(),
+            sha: "abc123def456".to_string(),
+            short_sha: "abc123d".to_string(),
+            commit_date: "2026-04-11".to_string(),
+            informational_version: "2.3.4-beta.1+5.feature/api.abc123".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("BuildMetaData"), Some("5.feature/api.abc123"));
+        assert_eq!(vars.get("FullBuildMetaData"), Some("5.feature/api.abc123"));
+        assert_eq!(vars.get("MajorMinorPatch"), Some("2.3.4"));
+        assert_eq!(vars.get("BranchName"), Some("feature/api"));
+        assert_eq!(vars.get("EscapedBranchName"), Some("feature-api"));
+        assert_eq!(vars.get("Sha"), Some("abc123def456"));
+        assert_eq!(vars.get("ShortSha"), Some("abc123d"));
+        assert_eq!(vars.get("CommitDate"), Some("2026-04-11"));
+        assert_eq!(
+            vars.get("InformationalVersion"),
+            Some("2.3.4-beta.1+5.feature/api.abc123")
+        );
+    }
+
+    #[test]
+    fn get_returns_expected_version_source_and_assembly_fields() {
+        let vars = GitVersionVariables {
+            version_source_distance: "14".to_string(),
+            version_source_increment: "Minor".to_string(),
+            version_source_sem_ver: "2.3.0".to_string(),
+            version_source_sha: "feedbeefcafe".to_string(),
+            uncommitted_changes: "3".to_string(),
+            assembly_sem_ver: "2.3.4".to_string(),
+            assembly_sem_file_ver: "2.3.4.1".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("VersionSourceDistance"), Some("14"));
+        assert_eq!(vars.get("VersionSourceIncrement"), Some("Minor"));
+        assert_eq!(vars.get("VersionSourceSemVer"), Some("2.3.0"));
+        assert_eq!(vars.get("VersionSourceSha"), Some("feedbeefcafe"));
+        assert_eq!(vars.get("UncommittedChanges"), Some("3"));
+        assert_eq!(vars.get("AssemblySemVer"), Some("2.3.4"));
+        assert_eq!(vars.get("AssemblySemFileVer"), Some("2.3.4.1"));
+    }
+
+    #[test]
+    fn iter_returns_some_for_all_available_keys() {
+        let vars = GitVersionVariables::default();
+
+        for (key, value) in vars.iter() {
+            assert!(GitVersionVariables::AVAILABLE_VARIABLES.contains(&key));
+            assert_eq!(value, Some(""));
+        }
+    }
 }

@@ -140,6 +140,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use super::SemanticVersionFormatValues;
+    use crate::config::enums::SemanticVersionFormat;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::semver::{SemanticVersion, VersionField};
 
@@ -234,5 +235,86 @@ mod tests {
         assert_eq!(values.uncommitted_changes, "0");
         assert_eq!(values.assembly_semver, "4.5.6");
         assert_eq!(values.assembly_file_semver, "4.5.6.0");
+    }
+
+    #[test]
+    fn new_formats_commit_date_using_configuration_pattern() {
+        let mut semver = SemanticVersion::new(1, 0, 0);
+        semver.build_metadata.commit_date = Some(
+            Utc.with_ymd_and_hms(2026, 4, 11, 9, 8, 7)
+                .single()
+                .expect("valid commit date"),
+        );
+
+        let mut config = GitVersionConfiguration::default();
+        config.commit_date_format = "%d/%m/%Y %H:%M".to_string();
+
+        let values = SemanticVersionFormatValues::new(&semver, &config, 0);
+        assert_eq!(values.commit_date, "11/04/2026 09:08");
+    }
+
+    #[test]
+    fn new_handles_numeric_pre_release_tag_without_label() {
+        let semver = SemanticVersion::parse("1.0.0-7", None, SemanticVersionFormat::Strict)
+            .expect("valid numeric pre-release");
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 10);
+
+        assert_eq!(values.pre_release_tag, "7");
+        assert_eq!(values.pre_release_tag_with_dash, "-7");
+        assert_eq!(values.pre_release_label, "");
+        assert_eq!(values.pre_release_label_with_dash, "");
+        assert_eq!(values.pre_release_number, "7");
+        assert_eq!(values.weighted_pre_release_number, "17");
+        assert_eq!(values.assembly_file_semver, "1.0.0.7");
+    }
+
+    #[test]
+    fn new_replaces_all_forward_slashes_when_escaping_branch_name() {
+        let mut semver = SemanticVersion::new(2, 1, 0);
+        semver.build_metadata.branch = Some("feature/a/b/c".to_string());
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 0);
+
+        assert_eq!(values.branch_name, "feature/a/b/c");
+        assert_eq!(values.escaped_branch_name, "feature-a-b-c");
+    }
+
+    #[test]
+    fn new_preserves_branch_name_without_slashes_when_escaping() {
+        let mut semver = SemanticVersion::new(2, 1, 0);
+        semver.build_metadata.branch = Some("release-2026.q2".to_string());
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 0);
+
+        assert_eq!(values.branch_name, "release-2026.q2");
+        assert_eq!(values.escaped_branch_name, "release-2026.q2");
+    }
+
+    #[test]
+    fn new_allows_negative_pre_release_weight() {
+        let mut semver = SemanticVersion::new(3, 2, 1);
+        semver.pre_release_tag.name = "alpha".to_string();
+        semver.pre_release_tag.number = Some(2);
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), -5);
+
+        assert_eq!(values.pre_release_number, "2");
+        assert_eq!(values.weighted_pre_release_number, "-3");
+    }
+
+    #[test]
+    fn new_stringifies_version_source_increment_variant_name() {
+        let mut semver = SemanticVersion::new(1, 0, 0);
+        semver.build_metadata.version_source_increment = VersionField::Major;
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 0);
+
+        assert_eq!(values.version_source_increment, "Major");
     }
 }

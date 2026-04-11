@@ -156,4 +156,71 @@ mod tests {
 
         assert!(err.to_string().contains("invalid version strategy bits"));
     }
+
+    #[test]
+    fn version_strategy_default_bits_match_expected_mask() {
+        assert_eq!(VersionStrategies::default().bits(), 63);
+    }
+
+    #[test]
+    fn version_strategy_default_serializes_to_expected_mask() {
+        let holder = VersionStrategyHolder {
+            version_strategy: VersionStrategies::default(),
+        };
+
+        let serialized = serde_json::to_string(&holder).expect("serialize default strategies");
+        assert_eq!(serialized, r#"{"version_strategy":63}"#);
+    }
+
+    #[test]
+    fn version_strategy_deserializes_empty_mask() {
+        let holder: VersionStrategyHolder =
+            serde_json::from_str(r#"{"version_strategy":0}"#).expect("deserialize empty mask");
+
+        assert!(holder.version_strategy.is_empty());
+    }
+
+    #[test]
+    fn version_strategy_deserializes_mainline_only_mask() {
+        let holder: VersionStrategyHolder =
+            serde_json::from_str(r#"{"version_strategy":64}"#).expect("deserialize mainline");
+
+        assert_eq!(holder.version_strategy, VersionStrategies::Mainline);
+    }
+
+    #[test]
+    fn version_strategy_deserialize_fails_for_partially_unknown_bits() {
+        let err = serde_json::from_str::<VersionStrategyHolder>(r#"{"version_strategy":129}"#)
+            .expect_err("mixed known and unknown bits should fail");
+
+        assert!(err.to_string().contains("invalid version strategy bits"));
+    }
+
+    #[test]
+    fn enum_variants_roundtrip_via_serde_json() {
+        let increment: IncrementStrategy =
+            serde_json::from_str(&serde_json::to_string(&IncrementStrategy::Inherit).unwrap())
+                .expect("roundtrip increment");
+        let deployment: DeploymentMode = serde_json::from_str(
+            &serde_json::to_string(&DeploymentMode::ContinuousDeployment).unwrap(),
+        )
+        .expect("roundtrip deployment");
+        let commit_mode: CommitMessageIncrementMode = serde_json::from_str(
+            &serde_json::to_string(&CommitMessageIncrementMode::MergeMessageOnly).unwrap(),
+        )
+        .expect("roundtrip commit mode");
+        let semver_format: SemanticVersionFormat =
+            serde_json::from_str(&serde_json::to_string(&SemanticVersionFormat::Loose).unwrap())
+                .expect("roundtrip semver format");
+        let assembly: AssemblyVersioningScheme = serde_json::from_str(
+            &serde_json::to_string(&AssemblyVersioningScheme::MajorMinor).unwrap(),
+        )
+        .expect("roundtrip assembly scheme");
+
+        assert_eq!(increment, IncrementStrategy::Inherit);
+        assert_eq!(deployment, DeploymentMode::ContinuousDeployment);
+        assert_eq!(commit_mode, CommitMessageIncrementMode::MergeMessageOnly);
+        assert_eq!(semver_format, SemanticVersionFormat::Loose);
+        assert_eq!(assembly, AssemblyVersioningScheme::MajorMinor);
+    }
 }
