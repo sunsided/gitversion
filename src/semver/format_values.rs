@@ -5,32 +5,59 @@ use crate::semver::SemanticVersion;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct SemanticVersionFormatValues {
+    #[serde(rename = "Major")]
     pub major: String,
+    #[serde(rename = "Minor")]
     pub minor: String,
+    #[serde(rename = "Patch")]
     pub patch: String,
+    #[serde(rename = "PreReleaseTag")]
     pub pre_release_tag: String,
+    #[serde(rename = "PreReleaseTagWithDash")]
     pub pre_release_tag_with_dash: String,
+    #[serde(rename = "PreReleaseLabel")]
     pub pre_release_label: String,
+    #[serde(rename = "PreReleaseLabelWithDash")]
     pub pre_release_label_with_dash: String,
+    #[serde(rename = "PreReleaseNumber")]
     pub pre_release_number: String,
+    #[serde(rename = "WeightedPreReleaseNumber")]
     pub weighted_pre_release_number: String,
+    #[serde(rename = "BuildMetaData")]
     pub build_metadata: String,
+    #[serde(rename = "FullBuildMetaData")]
     pub full_build_metadata: String,
+    #[serde(rename = "MajorMinorPatch")]
     pub major_minor_patch: String,
+    #[serde(rename = "SemVer")]
     pub semver: String,
+    #[serde(rename = "FullSemVer")]
     pub full_semver: String,
+    #[serde(rename = "InformationalVersion")]
     pub informational_version: String,
+    #[serde(rename = "BranchName")]
     pub branch_name: String,
+    #[serde(rename = "EscapedBranchName")]
     pub escaped_branch_name: String,
+    #[serde(rename = "Sha")]
     pub sha: String,
+    #[serde(rename = "ShortSha")]
     pub short_sha: String,
+    #[serde(rename = "CommitDate")]
     pub commit_date: String,
+    #[serde(rename = "VersionSourceDistance")]
     pub version_source_distance: String,
+    #[serde(rename = "VersionSourceIncrement")]
     pub version_source_increment: String,
+    #[serde(rename = "VersionSourceSemVer")]
     pub version_source_semver: String,
+    #[serde(rename = "VersionSourceSha")]
     pub version_source_sha: String,
+    #[serde(rename = "UncommittedChanges")]
     pub uncommitted_changes: String,
+    #[serde(rename = "AssemblySemVer")]
     pub assembly_semver: String,
+    #[serde(rename = "AssemblySemFileVer")]
     pub assembly_file_semver: String,
 }
 

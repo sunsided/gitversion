@@ -1,3 +1,4 @@
+use chrono::Utc;
 use eyre::Result;
 
 use crate::calculation::deployment_mode::continuous_delivery::ContinuousDeliveryCalculator;
@@ -42,7 +43,7 @@ impl NextVersionCalculator {
             .map(|v| v.incremented_version)
             .unwrap_or_else(|| SemanticVersion::new(0, 0, 0));
 
-        let deployed = match branch_config
+        let mut deployed = match branch_config
             .branch
             .deployment_mode
             .unwrap_or(DeploymentMode::ManualDeployment)
@@ -57,6 +58,13 @@ impl NextVersionCalculator {
                 ContinuousDeploymentCalculator::default().calculate(base, 1)
             }
         };
+
+        deployed.build_metadata.sha = Some(ctx.current_commit.sha().to_string());
+        deployed.build_metadata.short_sha =
+            Some(ctx.current_commit.sha().chars().take(7).collect::<String>());
+        deployed.build_metadata.branch = Some(ctx.current_branch.name.friendly());
+        deployed.build_metadata.commit_date = Some(ctx.current_commit.when.with_timezone(&Utc));
+        deployed.build_metadata.uncommitted_changes = ctx.number_of_uncommitted_changes;
 
         Ok(deployed)
     }
