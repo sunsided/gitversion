@@ -98,3 +98,173 @@ impl GitVersionConfiguration {
             .inherit(&self.branch_defaults)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::GitVersionConfiguration;
+    use crate::config::branch_config::BranchConfiguration;
+    use crate::config::enums::{DeploymentMode, IncrementStrategy};
+    use crate::git::reference_name::ReferenceName;
+
+    #[test]
+    fn default_uses_expected_workflow_and_versioning_defaults() {
+        let config = GitVersionConfiguration::default();
+
+        assert_eq!(config.workflow, "GitFlow/v1");
+        assert_eq!(config.tag_prefix_pattern, "[vV]?");
+        assert_eq!(config.commit_date_format, "%Y-%m-%d");
+        assert!(config.update_build_number);
+    }
+
+    #[test]
+    fn get_branch_configuration_inherits_branch_defaults_for_matching_branch() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            deployment_mode: Some(DeploymentMode::ContinuousDelivery),
+            track_merge_message: Some(false),
+            pre_release_weight: Some(42),
+            ..Default::default()
+        };
+        config.branches.insert(
+            "feature".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Minor),
+                label: Some("alpha".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let branch = ReferenceName::from_branch_name("feature/add-tests");
+        let resolved = config.get_branch_configuration(&branch);
+
+        assert_eq!(resolved.increment, Some(IncrementStrategy::Minor));
+        assert_eq!(resolved.label.as_deref(), Some("alpha"));
+        assert_eq!(
+            resolved.deployment_mode,
+            Some(DeploymentMode::ContinuousDelivery)
+        );
+        assert_eq!(resolved.track_merge_message, Some(false));
+        assert_eq!(resolved.pre_release_weight, Some(42));
+    }
+
+    #[test]
+    fn get_branch_configuration_uses_fallback_when_no_branch_matches() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            track_merge_target: Some(true),
+            ..Default::default()
+        };
+        config.branches.insert(
+            "unknown".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Patch),
+                label: Some("ci".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let branch = ReferenceName::from_branch_name("bugfix/issue-123");
+        let resolved = config.get_branch_configuration(&branch);
+
+        assert_eq!(resolved.increment, Some(IncrementStrategy::Patch));
+        assert_eq!(resolved.label.as_deref(), Some("ci"));
+        assert_eq!(resolved.track_merge_target, Some(true));
+    }
+
+    #[test]
+    fn get_fallback_branch_configuration_uses_unknown_branch_when_present() {
+        let mut config = GitVersionConfiguration {
+            branch_defaults: BranchConfiguration {
+                deployment_mode: Some(DeploymentMode::ContinuousDelivery),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        config.branches = HashMap::from([(
+            "unknown".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Major),
+                ..Default::default()
+            },
+        )]);
+
+        let fallback = config.get_fallback_branch_configuration();
+
+        assert_eq!(fallback.increment, Some(IncrementStrategy::Major));
+        assert_eq!(
+            fallback.deployment_mode,
+            Some(DeploymentMode::ContinuousDelivery)
+        );
+    }
+
+    #[test]
+    fn get_fallback_branch_configuration_uses_defaults_when_unknown_missing() {
+        let config = GitVersionConfiguration {
+            branch_defaults: BranchConfiguration {
+                increment: Some(IncrementStrategy::Minor),
+                is_main_branch: Some(true),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let fallback = config.get_fallback_branch_configuration();
+
+        assert_eq!(fallback.increment, Some(IncrementStrategy::Minor));
+        assert_eq!(fallback.is_main_branch, Some(true));
+    }
+
+    #[test]
+    fn get_branch_configuration_matches_remote_reference_names() {
+        let mut config = GitVersionConfiguration::default();
+        config.branches.insert(
+            "feature".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Minor),
+                ..Default::default()
+            },
+        );
+
+        let remote_branch = ReferenceName::parse("refs/remotes/origin/feature/xyz");
+        let resolved = config.get_branch_configuration(&remote_branch);
+
+        assert_eq!(resolved.increment, Some(IncrementStrategy::Minor));
+    }
+
+    #[test]
+    fn get_branch_configuration_returns_inherited_unknown_when_no_entries_exist() {
+        let config = GitVersionConfiguration {
+            branch_defaults: BranchConfiguration {
+                label: Some("default-label".to_string()),
+                track_merge_message: Some(false),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let branch = ReferenceName::from_branch_name("main");
+        let resolved = config.get_branch_configuration(&branch);
+
+        assert_eq!(resolved.label.as_deref(), Some("default-label"));
+        assert_eq!(resolved.track_merge_message, Some(false));
+    }
+
+    #[test]
+    fn default_branch_defaults_are_populated_for_inheritance() {
+        let config = GitVersionConfiguration::default();
+
+        assert_eq!(
+            config.branch_defaults.deployment_mode,
+            Some(DeploymentMode::ManualDeployment)
+        );
+        assert_eq!(
+            config.branch_defaults.increment,
+            Some(IncrementStrategy::Patch)
+        );
+        assert_eq!(config.branch_defaults.track_merge_target, Some(false));
+        assert_eq!(config.branch_defaults.track_merge_message, Some(true));
+        assert_eq!(config.branch_defaults.pre_release_weight, Some(0));
+    }
+}
