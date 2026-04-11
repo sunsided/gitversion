@@ -8,3 +8,6 @@ pub mod output;
 pub mod prepare;
 pub mod regex_patterns;
 pub mod semver;
+
+#[cfg(test)]
+pub mod testing;

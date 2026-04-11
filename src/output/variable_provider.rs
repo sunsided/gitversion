@@ -55,3 +55,35 @@ impl VariableProvider {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{TimeZone, Utc};
+
+    use super::VariableProvider;
+    use crate::config::gitversion_config::GitVersionConfiguration;
+    use crate::semver::SemanticVersion;
+
+    #[test]
+    fn get_variables_for_includes_build_metadata_fields() {
+        let mut semver = SemanticVersion::new(1, 2, 3);
+        semver.build_metadata.sha = Some("0123456789abcdef".to_string());
+        semver.build_metadata.short_sha = Some("0123456".to_string());
+        semver.build_metadata.branch = Some("feature/build-metadata".to_string());
+        semver.build_metadata.commit_date = Some(
+            Utc.with_ymd_and_hms(2025, 3, 14, 9, 26, 53)
+                .single()
+                .expect("valid timestamp"),
+        );
+        semver.build_metadata.uncommitted_changes = 2;
+
+        let variables =
+            VariableProvider.get_variables_for(&semver, &GitVersionConfiguration::default(), 0);
+
+        assert_eq!(variables.Sha, "0123456789abcdef");
+        assert_eq!(variables.ShortSha, "0123456");
+        assert_eq!(variables.BranchName, "feature/build-metadata");
+        assert_eq!(variables.CommitDate, "2025-03-14");
+        assert_eq!(variables.UncommittedChanges, "2");
+    }
+}

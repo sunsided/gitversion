@@ -109,3 +109,69 @@ impl NextVersionCalculator {
         out
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::NextVersionCalculator;
+    use crate::config::gitversion_config::GitVersionConfiguration;
+    use crate::context::GitVersionContext;
+    use crate::git::git2_impl::repository::Git2Repository;
+    use crate::testing::repository_fixture::RepositoryFixture;
+
+    #[test]
+    fn find_version_populates_commit_sha_short_sha_branch_and_date() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        fixture
+            .branch_to("feature/build-metadata")
+            .expect("branch switch");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repository");
+        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
+            .expect("build context");
+        let version = NextVersionCalculator
+            .find_version(&ctx)
+            .expect("calculate version");
+
+        let expected_sha = ctx.current_commit.sha().to_string();
+        let expected_short_sha = expected_sha.chars().take(7).collect::<String>();
+        let expected_branch = ctx.current_branch.name.friendly();
+        let expected_commit_date = ctx.current_commit.when.with_timezone(&chrono::Utc);
+
+        assert_eq!(
+            version.build_metadata.sha.as_deref(),
+            Some(expected_sha.as_str())
+        );
+        assert_eq!(
+            version.build_metadata.short_sha.as_deref(),
+            Some(expected_short_sha.as_str())
+        );
+        assert_eq!(
+            version.build_metadata.branch.as_deref(),
+            Some(expected_branch.as_str())
+        );
+        assert_eq!(
+            version.build_metadata.commit_date,
+            Some(expected_commit_date)
+        );
+    }
+
+    #[test]
+    fn find_version_populates_uncommitted_changes_count() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        fixture
+            .write_uncommitted_file("dirty.txt", "dirty\n")
+            .expect("create dirty file");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repository");
+        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
+            .expect("build context");
+        let version = NextVersionCalculator
+            .find_version(&ctx)
+            .expect("calculate version");
+
+        assert_eq!(ctx.number_of_uncommitted_changes, 1);
+        assert_eq!(version.build_metadata.uncommitted_changes, 1);
+    }
+}
