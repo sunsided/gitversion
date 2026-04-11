@@ -14,3 +14,21 @@ impl ContinuousDeploymentCalculator {
         version
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::calculation::deployment_mode::continuous_deployment::ContinuousDeploymentCalculator;
+    use crate::config::enums::SemanticVersionFormat;
+    use crate::semver::SemanticVersion;
+
+    #[test]
+    fn strips_pre_release_tag_and_sets_version_source_distance() {
+        let version = SemanticVersion::parse("2.0.0-beta.7", None, SemanticVersionFormat::Strict)
+            .expect("valid semver");
+
+        let calculated = ContinuousDeploymentCalculator.calculate(version, 9);
+
+        assert_eq!(calculated.to_string(), "2.0.0");
+        assert_eq!(calculated.build_metadata.version_source_distance, 9);
+    }
+}
