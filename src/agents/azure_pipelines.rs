@@ -34,8 +34,8 @@ mod tests {
 
     use once_cell::sync::Lazy;
 
-    use crate::agents::azure_pipelines::AzurePipelines;
     use crate::agents::BuildAgent;
+    use crate::agents::azure_pipelines::AzurePipelines;
     use crate::output::variables::GitVersionVariables;
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));

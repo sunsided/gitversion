@@ -104,6 +104,9 @@ mod tests {
         };
 
         let agent = GitHubActions;
-        assert_eq!(agent.set_build_number(&vars).as_deref(), Some("::notice::Build 1.2.3"));
+        assert_eq!(
+            agent.set_build_number(&vars).as_deref(),
+            Some("::notice::Build 1.2.3")
+        );
     }
 }

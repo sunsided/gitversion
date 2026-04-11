@@ -16,7 +16,9 @@ impl BuildAgent for SpaceAutomation {
     fn set_build_number(&self, _variables: &GitVersionVariables) -> Option<String> {
         None
     }
-    fn set_output_variables(&self, _name: &str, _value: Option<&str>) -> Vec<String> {
-        Vec::new()
+    fn set_output_variables(&self, name: &str, value: Option<&str>) -> Vec<String> {
+        value
+            .map(|v| vec![format!("export {name}={v}")])
+            .unwrap_or_default()
     }
 }

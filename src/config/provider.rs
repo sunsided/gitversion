@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 
 use eyre::Result;
 use figment::{
-    providers::{Format, Serialized, Yaml},
     Figment,
+    providers::{Format, Serialized, Yaml},
 };
 
 use crate::config::gitversion_config::GitVersionConfiguration;

@@ -1,4 +1,4 @@
-use eyre::{bail, Result};
+use eyre::{Result, bail};
 
 use crate::git::git2_impl::repository::Git2Repository;
 

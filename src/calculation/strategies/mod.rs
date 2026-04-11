@@ -11,5 +11,9 @@ use crate::calculation::effective_branch::EffectiveBranchConfiguration;
 use crate::context::GitVersionContext;
 
 pub trait VersionStrategy {
-    fn get_base_versions(&self, ctx: &GitVersionContext, config: &EffectiveBranchConfiguration) -> Vec<BaseVersion>;
+    fn get_base_versions(
+        &self,
+        ctx: &GitVersionContext,
+        config: &EffectiveBranchConfiguration,
+    ) -> Vec<BaseVersion>;
 }

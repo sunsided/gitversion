@@ -97,8 +97,8 @@ mod tests {
     use rstest::rstest;
 
     use super::{
-        tag_prefix_regex, BUMP_MAJOR, BUMP_MINOR, BUMP_NONE, BUMP_PATCH, MERGE_MESSAGE_PATTERNS,
-        SEMVER_LOOSE, SEMVER_STRICT, VERSION_IN_BRANCH,
+        BUMP_MAJOR, BUMP_MINOR, BUMP_NONE, BUMP_PATCH, MERGE_MESSAGE_PATTERNS, SEMVER_LOOSE,
+        SEMVER_STRICT, VERSION_IN_BRANCH, tag_prefix_regex,
     };
 
     #[rstest]

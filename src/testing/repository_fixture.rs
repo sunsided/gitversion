@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use eyre::{eyre, Result};
-use git2::{build::CheckoutBuilder, Oid, Repository, Signature};
+use eyre::{Result, eyre};
+use git2::{Oid, Repository, Signature, build::CheckoutBuilder};
 use tempfile::TempDir;
 
 use crate::config::gitversion_config::GitVersionConfiguration;
