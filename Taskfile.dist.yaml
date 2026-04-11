@@ -1,0 +1,85 @@
+version: '3'
+
+tasks:
+  all:
+    desc: Run CI checks (fmt, lint, test, build)
+    deps:
+      - fmt:check
+      - lint
+      - test
+      - build
+
+  build:
+    desc: Build debug binaries
+    cmds:
+      - cargo build
+
+  build:release:
+    desc: Build release binaries
+    cmds:
+      - cargo build --release
+
+  clean:
+    desc: Clean cargo build artifacts
+    cmds:
+      - cargo clean
+
+  check:
+    desc: Type-check all targets
+    cmds:
+      - cargo check --all-targets
+
+  fmt:
+    desc: Format Rust code
+    cmds:
+      - cargo fmt
+
+  fmt:check:
+    desc: Check Rust formatting
+    cmds:
+      - cargo fmt -- --check
+
+  lint:
+    desc: Run clippy lints for all targets
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
+  lint:fix:
+    desc: Apply clippy fixes where possible
+    cmds:
+      - cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
+
+  test:
+    desc: Run all tests
+    cmds:
+      - cargo test --all-targets --all-features
+
+  test:verbose:
+    desc: Run tests with verbose output
+    cmds:
+      - cargo test --all-targets --all-features -- --nocapture
+
+  run:
+    desc: Run application (pass args with -- <args>)
+    cmds:
+      - cargo run -- {{.CLI_ARGS}}
+
+  run:release:
+    desc: Run release build (pass args with -- <args>)
+    cmds:
+      - cargo run --release -- {{.CLI_ARGS}}
+
+  doc:
+    desc: Build project documentation
+    cmds:
+      - cargo doc --no-deps
+
+  audit:
+    desc: Audit dependencies for vulnerabilities (requires cargo-audit)
+    cmds:
+      - cargo audit
+
+  update:
+    desc: Update Cargo.lock dependencies
+    cmds:
+      - cargo update
