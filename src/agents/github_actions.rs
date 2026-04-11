@@ -19,7 +19,7 @@ impl BuildAgent for GitHubActions {
         env::var("GITHUB_REF").ok()
     }
     fn set_build_number(&self, variables: &GitVersionVariables) -> Option<String> {
-        Some(format!("::notice::Build {}", variables.FullSemVer))
+        Some(format!("::notice::Build {}", variables.full_sem_ver))
     }
     fn set_output_variables(&self, name: &str, value: Option<&str>) -> Vec<String> {
         if let (Ok(path), Some(value)) = (env::var("GITHUB_ENV"), value)
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn set_build_number_uses_notice_format() {
         let vars = GitVersionVariables {
-            FullSemVer: "1.2.3".to_string(),
+            full_sem_ver: "1.2.3".to_string(),
             ..Default::default()
         };
 

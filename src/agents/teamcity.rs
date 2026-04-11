@@ -13,7 +13,7 @@ impl BuildAgent for TeamCity {
     fn set_build_number(&self, variables: &GitVersionVariables) -> Option<String> {
         Some(format!(
             "##teamcity[buildNumber '{}']",
-            variables.FullSemVer
+            variables.full_sem_ver
         ))
     }
     fn set_output_variables(&self, name: &str, value: Option<&str>) -> Vec<String> {
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn set_build_number_teamcity_format() {
         let vars = GitVersionVariables {
-            FullSemVer: "1.0.0".to_string(),
+            full_sem_ver: "1.0.0".to_string(),
             ..Default::default()
         };
 

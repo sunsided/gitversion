@@ -25,33 +25,33 @@ impl VariableProvider {
                 std::env::var(k).ok()
             });
         GitVersionVariables {
-            Major: values.major,
-            Minor: values.minor,
-            Patch: values.patch,
-            PreReleaseTag: values.pre_release_tag,
-            PreReleaseTagWithDash: values.pre_release_tag_with_dash,
-            PreReleaseLabel: values.pre_release_label,
-            PreReleaseLabelWithDash: values.pre_release_label_with_dash,
-            PreReleaseNumber: values.pre_release_number,
-            WeightedPreReleaseNumber: values.weighted_pre_release_number,
-            BuildMetaData: values.build_metadata,
-            FullBuildMetaData: values.full_build_metadata,
-            MajorMinorPatch: values.major_minor_patch,
-            SemVer: values.semver,
-            FullSemVer: values.full_semver,
-            InformationalVersion: informational,
-            BranchName: values.branch_name,
-            EscapedBranchName: values.escaped_branch_name,
-            Sha: values.sha,
-            ShortSha: values.short_sha,
-            CommitDate: values.commit_date,
-            VersionSourceDistance: values.version_source_distance,
-            VersionSourceIncrement: values.version_source_increment,
-            VersionSourceSemVer: values.version_source_semver,
-            VersionSourceSha: values.version_source_sha,
-            UncommittedChanges: values.uncommitted_changes,
-            AssemblySemVer: assembly_semver,
-            AssemblySemFileVer: assembly_file_semver,
+            major: values.major,
+            minor: values.minor,
+            patch: values.patch,
+            pre_release_tag: values.pre_release_tag,
+            pre_release_tag_with_dash: values.pre_release_tag_with_dash,
+            pre_release_label: values.pre_release_label,
+            pre_release_label_with_dash: values.pre_release_label_with_dash,
+            pre_release_number: values.pre_release_number,
+            weighted_pre_release_number: values.weighted_pre_release_number,
+            build_meta_data: values.build_metadata,
+            full_build_meta_data: values.full_build_metadata,
+            major_minor_patch: values.major_minor_patch,
+            sem_ver: values.semver,
+            full_sem_ver: values.full_semver,
+            informational_version: informational,
+            branch_name: values.branch_name,
+            escaped_branch_name: values.escaped_branch_name,
+            sha: values.sha,
+            short_sha: values.short_sha,
+            commit_date: values.commit_date,
+            version_source_distance: values.version_source_distance,
+            version_source_increment: values.version_source_increment,
+            version_source_sem_ver: values.version_source_semver,
+            version_source_sha: values.version_source_sha,
+            uncommitted_changes: values.uncommitted_changes,
+            assembly_sem_ver: assembly_semver,
+            assembly_sem_file_ver: assembly_file_semver,
         }
     }
 }
@@ -80,10 +80,10 @@ mod tests {
         let variables =
             VariableProvider.get_variables_for(&semver, &GitVersionConfiguration::default(), 0);
 
-        assert_eq!(variables.Sha, "0123456789abcdef");
-        assert_eq!(variables.ShortSha, "0123456");
-        assert_eq!(variables.BranchName, "feature/build-metadata");
-        assert_eq!(variables.CommitDate, "2025-03-14");
-        assert_eq!(variables.UncommittedChanges, "2");
+        assert_eq!(variables.sha, "0123456789abcdef");
+        assert_eq!(variables.short_sha, "0123456");
+        assert_eq!(variables.branch_name, "feature/build-metadata");
+        assert_eq!(variables.commit_date, "2025-03-14");
+        assert_eq!(variables.uncommitted_changes, "2");
     }
 }

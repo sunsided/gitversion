@@ -64,7 +64,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let mut repo = Git2Repository::open(&cli.target_path)?;
 
-    let prepare = GitPreparer::default();
+    let prepare = GitPreparer;
     prepare.prepare(
         GitPrepareOptions {
             no_fetch: cli.no_fetch,
@@ -74,7 +74,7 @@ fn main() -> Result<()> {
         &mut repo,
     )?;
 
-    let provider = ConfigurationProvider::default();
+    let provider = ConfigurationProvider;
     let config = provider.provide(
         &cli.target_path,
         cli.config.as_deref(),
@@ -82,10 +82,10 @@ fn main() -> Result<()> {
     )?;
 
     let ctx = GitVersionContext::from_repository(repo, config)?;
-    let calculator = NextVersionCalculator::default();
+    let calculator = NextVersionCalculator;
     let semver = calculator.find_version(&ctx)?;
 
-    let vars = VariableProvider::default().get_variables_for(&semver, &ctx.configuration, 0);
+    let vars = VariableProvider.get_variables_for(&semver, &ctx.configuration, 0);
 
     if let Some(name) = cli.show_variable.as_deref() {
         if let Some(value) = vars.get(name) {

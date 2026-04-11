@@ -16,7 +16,7 @@ impl BuildAgent for Jenkins {
             .or_else(|| env::var("GIT_BRANCH").ok())
     }
     fn set_build_number(&self, variables: &GitVersionVariables) -> Option<String> {
-        Some(format!("BUILD_NUMBER={}", variables.FullSemVer))
+        Some(format!("BUILD_NUMBER={}", variables.full_sem_ver))
     }
     fn set_output_variables(&self, _name: &str, _value: Option<&str>) -> Vec<String> {
         Vec::new()

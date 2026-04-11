@@ -16,7 +16,7 @@ impl BuildAgent for AppVeyor {
     fn set_build_number(&self, variables: &GitVersionVariables) -> Option<String> {
         Some(format!(
             "appveyor UpdateBuild -Version {}",
-            variables.FullSemVer
+            variables.full_sem_ver
         ))
     }
     fn set_output_variables(&self, name: &str, value: Option<&str>) -> Vec<String> {

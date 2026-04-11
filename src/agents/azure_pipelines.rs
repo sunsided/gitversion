@@ -18,7 +18,7 @@ impl BuildAgent for AzurePipelines {
     fn set_build_number(&self, variables: &GitVersionVariables) -> Option<String> {
         Some(format!(
             "##vso[build.updatebuildnumber]{}",
-            variables.FullSemVer
+            variables.full_sem_ver
         ))
     }
     fn set_output_variables(&self, name: &str, value: Option<&str>) -> Vec<String> {
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn set_build_number_outputs_vso_command() {
         let vars = GitVersionVariables {
-            FullSemVer: "0.0.0-Unstable4".to_string(),
+            full_sem_ver: "0.0.0-Unstable4".to_string(),
             ..Default::default()
         };
 

@@ -1,0 +1,4 @@
+branches:
+  main:
+    deployment_mode: ContinuousDelivery
+    label: alpha

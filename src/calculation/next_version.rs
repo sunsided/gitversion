@@ -30,7 +30,7 @@ pub struct NextVersionCalculator;
 
 impl NextVersionCalculator {
     pub fn find_version(&self, ctx: &GitVersionContext) -> Result<SemanticVersion> {
-        let branch_config = EffectiveBranchConfigurationFinder::default()
+        let branch_config = EffectiveBranchConfigurationFinder
             .get_configurations(&ctx.current_branch, &ctx.configuration)
             .into_iter()
             .next()
@@ -38,24 +38,29 @@ impl NextVersionCalculator {
 
         let mut candidates = self.calculate_next_versions(ctx, &branch_config);
         candidates.sort_by(|a, b| a.incremented_version.cmp(&b.incremented_version));
-        let base = candidates
+        let mut base = candidates
             .pop()
             .map(|v| v.incremented_version)
             .unwrap_or_else(|| SemanticVersion::new(0, 0, 0));
+
+        if let Some(label) = branch_config
+            .branch
+            .label
+            .as_deref()
+            .filter(|label| !label.is_empty())
+        {
+            base = base.with_label(label);
+        }
 
         let mut deployed = match branch_config
             .branch
             .deployment_mode
             .unwrap_or(DeploymentMode::ManualDeployment)
         {
-            DeploymentMode::ManualDeployment => {
-                ManualDeploymentCalculator::default().calculate(base)
-            }
-            DeploymentMode::ContinuousDelivery => {
-                ContinuousDeliveryCalculator::default().calculate(base, 1)
-            }
+            DeploymentMode::ManualDeployment => ManualDeploymentCalculator.calculate(base),
+            DeploymentMode::ContinuousDelivery => ContinuousDeliveryCalculator.calculate(base, 1),
             DeploymentMode::ContinuousDeployment => {
-                ContinuousDeploymentCalculator::default().calculate(base, 1)
+                ContinuousDeploymentCalculator.calculate(base, 1)
             }
         };
 
@@ -113,7 +118,9 @@ impl NextVersionCalculator {
 #[cfg(test)]
 mod tests {
     use super::NextVersionCalculator;
+    use crate::config::enums::DeploymentMode;
     use crate::config::gitversion_config::GitVersionConfiguration;
+    use crate::config::workflows;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;
     use crate::testing::repository_fixture::RepositoryFixture;
@@ -173,5 +180,29 @@ mod tests {
 
         assert_eq!(ctx.number_of_uncommitted_changes, 1);
         assert_eq!(version.build_metadata.uncommitted_changes, 1);
+    }
+
+    #[test]
+    fn find_version_applies_branch_label_before_continuous_delivery() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repository");
+        let mut config = GitVersionConfiguration::default();
+        config.branches = workflows::resolve(&config.workflow);
+        let main = config
+            .branches
+            .get_mut("main")
+            .expect("main branch configuration");
+        main.deployment_mode = Some(DeploymentMode::ContinuousDelivery);
+        main.label = Some("alpha".to_string());
+
+        let ctx = GitVersionContext::from_repository(repo, config).expect("build context");
+        let version = NextVersionCalculator
+            .find_version(&ctx)
+            .expect("calculate version");
+
+        assert_eq!(version.pre_release_tag.name, "alpha");
+        assert_eq!(version.pre_release_tag.number, Some(1));
     }
 }
