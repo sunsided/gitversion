@@ -129,3 +129,42 @@ impl GitVersionVariables {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::GitVersionVariables;
+
+    #[test]
+    fn get_returns_expected_values_for_known_keys() {
+        let vars = GitVersionVariables {
+            major: "1".to_string(),
+            full_sem_ver: "1.2.3-beta.4".to_string(),
+            branch_name: "feature/test".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(vars.get("Major"), Some("1"));
+        assert_eq!(vars.get("FullSemVer"), Some("1.2.3-beta.4"));
+        assert_eq!(vars.get("BranchName"), Some("feature/test"));
+        assert_eq!(vars.get("Unknown"), None);
+    }
+
+    #[test]
+    fn iter_includes_all_available_variables_once() {
+        let vars = GitVersionVariables::default();
+        let iterated = vars.iter();
+
+        assert_eq!(
+            iterated.len(),
+            GitVersionVariables::AVAILABLE_VARIABLES.len()
+        );
+
+        let keys: Vec<&str> = iterated.iter().map(|(key, _)| *key).collect();
+        assert_eq!(keys, GitVersionVariables::AVAILABLE_VARIABLES);
+
+        let unique: HashSet<&str> = keys.into_iter().collect();
+        assert_eq!(unique.len(), GitVersionVariables::AVAILABLE_VARIABLES.len());
+    }
+}

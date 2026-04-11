@@ -89,3 +89,71 @@ pub enum AssemblyVersioningScheme {
 }
 
 pub type AssemblyFileVersioningScheme = AssemblyVersioningScheme;
+
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
+
+    use super::{
+        AssemblyVersioningScheme, CommitMessageIncrementMode, DeploymentMode, IncrementStrategy,
+        SemanticVersionFormat, VersionStrategies,
+    };
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct VersionStrategyHolder {
+        version_strategy: VersionStrategies,
+    }
+
+    #[test]
+    fn defaults_match_expected_values() {
+        assert_eq!(IncrementStrategy::default(), IncrementStrategy::None);
+        assert_eq!(DeploymentMode::default(), DeploymentMode::ManualDeployment);
+        assert_eq!(
+            CommitMessageIncrementMode::default(),
+            CommitMessageIncrementMode::Enabled
+        );
+        assert_eq!(
+            SemanticVersionFormat::default(),
+            SemanticVersionFormat::Strict
+        );
+        assert_eq!(
+            AssemblyVersioningScheme::default(),
+            AssemblyVersioningScheme::MajorMinorPatchTag
+        );
+    }
+
+    #[test]
+    fn version_strategy_default_contains_all_non_mainline_strategies() {
+        let strategy = VersionStrategies::default();
+
+        assert!(strategy.contains(VersionStrategies::Fallback));
+        assert!(strategy.contains(VersionStrategies::ConfiguredNextVersion));
+        assert!(strategy.contains(VersionStrategies::MergeMessage));
+        assert!(strategy.contains(VersionStrategies::TaggedCommit));
+        assert!(strategy.contains(VersionStrategies::TrackReleaseBranches));
+        assert!(strategy.contains(VersionStrategies::VersionInBranchName));
+        assert!(!strategy.contains(VersionStrategies::Mainline));
+    }
+
+    #[test]
+    fn version_strategy_serializes_and_deserializes_using_bits() {
+        let holder = VersionStrategyHolder {
+            version_strategy: VersionStrategies::Fallback | VersionStrategies::TaggedCommit,
+        };
+
+        let serialized = serde_json::to_string(&holder).expect("serialize strategies");
+        assert_eq!(serialized, r#"{"version_strategy":9}"#);
+
+        let deserialized: VersionStrategyHolder =
+            serde_json::from_str(&serialized).expect("deserialize strategies");
+        assert_eq!(deserialized.version_strategy, holder.version_strategy);
+    }
+
+    #[test]
+    fn version_strategy_deserialize_fails_for_unknown_bits() {
+        let err = serde_json::from_str::<VersionStrategyHolder>(r#"{"version_strategy":1024}"#)
+            .expect_err("invalid bits should fail");
+
+        assert!(err.to_string().contains("invalid version strategy bits"));
+    }
+}

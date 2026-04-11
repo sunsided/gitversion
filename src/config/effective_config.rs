@@ -33,3 +33,85 @@ impl EffectiveConfiguration {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::config::branch_config::BranchConfiguration;
+    use crate::config::effective_config::EffectiveConfiguration;
+    use crate::config::enums::{CommitMessageIncrementMode, DeploymentMode, IncrementStrategy};
+    use crate::config::gitversion_config::GitVersionConfiguration;
+
+    #[test]
+    fn from_uses_branch_values_when_present() {
+        let config = GitVersionConfiguration::default();
+        let branch = BranchConfiguration {
+            deployment_mode: Some(DeploymentMode::ContinuousDeployment),
+            label: Some("alpha".to_string()),
+            increment: Some(IncrementStrategy::Major),
+            track_merge_target: Some(true),
+            track_merge_message: Some(false),
+            commit_message_incrementing: Some(CommitMessageIncrementMode::MergeMessageOnly),
+            tracks_release_branches: Some(true),
+            is_release_branch: Some(true),
+            is_main_branch: Some(true),
+            pre_release_weight: Some(12345),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &branch);
+
+        assert_eq!(
+            effective.deployment_mode,
+            DeploymentMode::ContinuousDeployment
+        );
+        assert_eq!(effective.label, "alpha");
+        assert_eq!(effective.increment, IncrementStrategy::Major);
+        assert!(effective.track_merge_target);
+        assert!(!effective.track_merge_message);
+        assert_eq!(
+            effective.commit_message_incrementing,
+            CommitMessageIncrementMode::MergeMessageOnly
+        );
+        assert!(effective.tracks_release_branches);
+        assert!(effective.is_release_branch);
+        assert!(effective.is_main_branch);
+        assert_eq!(effective.pre_release_weight, 12345);
+    }
+
+    #[test]
+    fn from_falls_back_to_branch_defaults_for_missing_values() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults = BranchConfiguration {
+            deployment_mode: Some(DeploymentMode::ContinuousDelivery),
+            label: Some("beta".to_string()),
+            increment: Some(IncrementStrategy::Minor),
+            track_merge_target: Some(true),
+            track_merge_message: Some(false),
+            commit_message_incrementing: Some(CommitMessageIncrementMode::Disabled),
+            tracks_release_branches: Some(true),
+            is_release_branch: Some(true),
+            is_main_branch: Some(true),
+            pre_release_weight: Some(99),
+            ..Default::default()
+        };
+
+        let effective = EffectiveConfiguration::from(&config, &BranchConfiguration::default());
+
+        assert_eq!(
+            effective.deployment_mode,
+            DeploymentMode::ContinuousDelivery
+        );
+        assert_eq!(effective.label, "beta");
+        assert_eq!(effective.increment, IncrementStrategy::Minor);
+        assert!(effective.track_merge_target);
+        assert!(!effective.track_merge_message);
+        assert_eq!(
+            effective.commit_message_incrementing,
+            CommitMessageIncrementMode::Disabled
+        );
+        assert!(effective.tracks_release_branches);
+        assert!(effective.is_release_branch);
+        assert!(effective.is_main_branch);
+        assert_eq!(effective.pre_release_weight, 99);
+    }
+}

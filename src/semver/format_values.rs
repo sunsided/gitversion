@@ -134,3 +134,105 @@ impl SemanticVersionFormatValues {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{TimeZone, Utc};
+
+    use super::SemanticVersionFormatValues;
+    use crate::config::gitversion_config::GitVersionConfiguration;
+    use crate::semver::{SemanticVersion, VersionField};
+
+    #[test]
+    fn new_populates_expected_values_from_semver_and_metadata() {
+        let mut semver = SemanticVersion::new(1, 2, 3);
+        semver.pre_release_tag.name = "beta".to_string();
+        semver.pre_release_tag.number = Some(4);
+        semver.build_metadata.commits_since_tag = Some(9);
+        semver.build_metadata.branch = Some("feature/api/v2".to_string());
+        semver.build_metadata.sha = Some("0123456789abcdef".to_string());
+        semver.build_metadata.short_sha = Some("0123456".to_string());
+        semver.build_metadata.commit_date = Some(
+            Utc.with_ymd_and_hms(2025, 1, 2, 3, 4, 5)
+                .single()
+                .expect("valid commit date"),
+        );
+        semver.build_metadata.version_source_distance = 11;
+        semver.build_metadata.version_source_increment = VersionField::Minor;
+        semver.build_metadata.version_source_semver = Some(Box::new(SemanticVersion::new(1, 2, 0)));
+        semver.build_metadata.version_source_sha = Some("abcdef0123456789".to_string());
+        semver.build_metadata.uncommitted_changes = 2;
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 60000);
+
+        assert_eq!(values.major, "1");
+        assert_eq!(values.minor, "2");
+        assert_eq!(values.patch, "3");
+        assert_eq!(values.pre_release_tag, "beta.4");
+        assert_eq!(values.pre_release_tag_with_dash, "-beta.4");
+        assert_eq!(values.pre_release_label, "beta");
+        assert_eq!(values.pre_release_label_with_dash, "-beta");
+        assert_eq!(values.pre_release_number, "4");
+        assert_eq!(values.weighted_pre_release_number, "60004");
+        assert_eq!(values.build_metadata, "9.feature/api/v2.0123456789abcdef");
+        assert_eq!(
+            values.full_build_metadata,
+            "9.feature/api/v2.0123456789abcdef"
+        );
+        assert_eq!(values.major_minor_patch, "1.2.3");
+        assert_eq!(
+            values.semver,
+            "1.2.3-beta.4+9.feature/api/v2.0123456789abcdef"
+        );
+        assert_eq!(
+            values.full_semver,
+            "1.2.3-beta.4+9.feature/api/v2.0123456789abcdef"
+        );
+        assert_eq!(
+            values.informational_version,
+            "1.2.3-beta.4+9.feature/api/v2.0123456789abcdef"
+        );
+        assert_eq!(values.branch_name, "feature/api/v2");
+        assert_eq!(values.escaped_branch_name, "feature-api-v2");
+        assert_eq!(values.sha, "0123456789abcdef");
+        assert_eq!(values.short_sha, "0123456");
+        assert_eq!(values.commit_date, "2025-01-02");
+        assert_eq!(values.version_source_distance, "11");
+        assert_eq!(values.version_source_increment, "Minor");
+        assert_eq!(values.version_source_semver, "1.2.0");
+        assert_eq!(values.version_source_sha, "abcdef0123456789");
+        assert_eq!(values.uncommitted_changes, "2");
+        assert_eq!(values.assembly_semver, "1.2.3");
+        assert_eq!(values.assembly_file_semver, "1.2.3.4");
+    }
+
+    #[test]
+    fn new_uses_defaults_when_no_pre_release_or_metadata_present() {
+        let semver = SemanticVersion::new(4, 5, 6);
+
+        let values =
+            SemanticVersionFormatValues::new(&semver, &GitVersionConfiguration::default(), 7);
+
+        assert_eq!(values.pre_release_tag, "");
+        assert_eq!(values.pre_release_tag_with_dash, "");
+        assert_eq!(values.pre_release_label, "");
+        assert_eq!(values.pre_release_label_with_dash, "");
+        assert_eq!(values.pre_release_number, "0");
+        assert_eq!(values.weighted_pre_release_number, "7");
+        assert_eq!(values.build_metadata, "");
+        assert_eq!(values.full_build_metadata, "");
+        assert_eq!(values.branch_name, "");
+        assert_eq!(values.escaped_branch_name, "");
+        assert_eq!(values.sha, "");
+        assert_eq!(values.short_sha, "");
+        assert_eq!(values.commit_date, "1970-01-01");
+        assert_eq!(values.version_source_distance, "0");
+        assert_eq!(values.version_source_increment, "None");
+        assert_eq!(values.version_source_semver, "");
+        assert_eq!(values.version_source_sha, "");
+        assert_eq!(values.uncommitted_changes, "0");
+        assert_eq!(values.assembly_semver, "4.5.6");
+        assert_eq!(values.assembly_file_semver, "4.5.6.0");
+    }
+}
