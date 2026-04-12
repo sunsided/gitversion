@@ -21,8 +21,8 @@ impl BuildAgent for LocalBuild {
 
 #[cfg(test)]
 mod tests {
-    use crate::agents::local::LocalBuild;
     use crate::agents::BuildAgent;
+    use crate::agents::local::LocalBuild;
     use crate::output::variables::GitVersionVariables;
 
     #[test]
@@ -37,9 +37,11 @@ mod tests {
     fn local_build_does_not_emit_build_or_variable_commands() {
         let agent = LocalBuild;
 
-        assert!(agent
-            .set_build_number(&GitVersionVariables::default())
-            .is_none());
+        assert!(
+            agent
+                .set_build_number(&GitVersionVariables::default())
+                .is_none()
+        );
         assert!(agent.set_output_variables("Foo", Some("bar")).is_empty());
     }
 }

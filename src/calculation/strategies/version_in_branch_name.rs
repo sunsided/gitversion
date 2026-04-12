@@ -44,8 +44,8 @@ mod tests {
     use rstest::rstest;
 
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
-    use crate::calculation::strategies::version_in_branch_name::VersionInBranchNameStrategy;
     use crate::calculation::strategies::VersionStrategy;
+    use crate::calculation::strategies::version_in_branch_name::VersionInBranchNameStrategy;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;

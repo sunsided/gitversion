@@ -125,6 +125,20 @@ impl RepositoryFixture {
         Ok(merge_commit_id.to_string())
     }
 
+    pub fn merge_no_ff(&mut self, source_branch: &str) -> Result<String> {
+        let current_branch = self.repo.head()?.shorthand().unwrap_or("main").to_string();
+        let message = format!("Merge branch '{source_branch}' into {current_branch}");
+        self.merge(source_branch, &message)
+    }
+
+    pub fn delete_branch(&mut self, branch_name: &str) -> Result<()> {
+        let mut branch = self
+            .repo
+            .find_branch(branch_name, git2::BranchType::Local)?;
+        branch.delete()?;
+        Ok(())
+    }
+
     pub fn head_sha(&self) -> Result<String> {
         self.repo
             .head()?
@@ -243,6 +257,59 @@ mod tests {
         let merge_commit = fixture.find_commit(&merge_sha).expect("find merge commit");
 
         assert_eq!(merge_commit.parent_count(), 2);
+    }
+
+    #[test]
+    fn merge_no_ff_creates_merge_commit_with_two_parents() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        let initial_branch = fixture
+            .repo
+            .head()
+            .expect("head")
+            .shorthand()
+            .unwrap_or("master")
+            .to_string();
+        fixture.branch_to("feature/no-ff").expect("branch");
+        fixture
+            .make_a_commit("feature commit")
+            .expect("feature commit");
+        fixture
+            .checkout(&initial_branch)
+            .expect("checkout initial branch");
+
+        let merge_sha = fixture.merge_no_ff("feature/no-ff").expect("merge");
+        let merge_commit = fixture.find_commit(&merge_sha).expect("find merge commit");
+
+        assert_eq!(merge_commit.parent_count(), 2);
+    }
+
+    #[test]
+    fn delete_branch_removes_existing_branch() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        let initial_branch = fixture
+            .repo
+            .head()
+            .expect("head")
+            .shorthand()
+            .unwrap_or("master")
+            .to_string();
+        fixture.branch_to("feature/delete-me").expect("branch");
+        fixture
+            .checkout(&initial_branch)
+            .expect("checkout initial branch");
+
+        fixture
+            .delete_branch("feature/delete-me")
+            .expect("delete branch");
+
+        assert!(
+            fixture
+                .repo
+                .find_branch("feature/delete-me", git2::BranchType::Local)
+                .is_err()
+        );
     }
 
     #[test]

@@ -29,8 +29,8 @@ mod tests {
 
     use once_cell::sync::Lazy;
 
-    use crate::agents::gitlab_ci::GitLabCI;
     use crate::agents::BuildAgent;
+    use crate::agents::gitlab_ci::GitLabCI;
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 

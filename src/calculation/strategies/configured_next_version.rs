@@ -40,8 +40,8 @@ impl VersionStrategy for ConfiguredNextVersionStrategy {
 #[cfg(test)]
 mod tests {
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
-    use crate::calculation::strategies::configured_next_version::ConfiguredNextVersionStrategy;
     use crate::calculation::strategies::VersionStrategy;
+    use crate::calculation::strategies::configured_next_version::ConfiguredNextVersionStrategy;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;

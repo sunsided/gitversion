@@ -31,8 +31,8 @@ mod tests {
 
     use once_cell::sync::Lazy;
 
-    use crate::agents::jenkins::Jenkins;
     use crate::agents::BuildAgent;
+    use crate::agents::jenkins::Jenkins;
     use crate::output::variables::GitVersionVariables;
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));

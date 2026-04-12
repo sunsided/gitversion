@@ -29,8 +29,8 @@ mod tests {
 
     use once_cell::sync::Lazy;
 
-    use crate::agents::space_automation::SpaceAutomation;
     use crate::agents::BuildAgent;
+    use crate::agents::space_automation::SpaceAutomation;
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 

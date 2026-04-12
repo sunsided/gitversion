@@ -122,8 +122,8 @@ fn parse_semver_tags_by_commit(ctx: &GitVersionContext) -> HashMap<String, Seman
 #[cfg(test)]
 mod tests {
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
-    use crate::calculation::strategies::mainline::MainlineVersionStrategy;
     use crate::calculation::strategies::VersionStrategy;
+    use crate::calculation::strategies::mainline::MainlineVersionStrategy;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;

@@ -34,8 +34,8 @@ mod tests {
     use rstest::rstest;
 
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
-    use crate::calculation::strategies::merge_message::MergeMessageVersionStrategy;
     use crate::calculation::strategies::VersionStrategy;
+    use crate::calculation::strategies::merge_message::MergeMessageVersionStrategy;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;

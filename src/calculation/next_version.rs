@@ -7,6 +7,7 @@ use crate::calculation::deployment_mode::manual::ManualDeploymentCalculator;
 use crate::calculation::effective_branch::{
     EffectiveBranchConfiguration, EffectiveBranchConfigurationFinder,
 };
+use crate::calculation::strategies::VersionStrategy;
 use crate::calculation::strategies::configured_next_version::ConfiguredNextVersionStrategy;
 use crate::calculation::strategies::fallback::FallbackVersionStrategy;
 use crate::calculation::strategies::mainline::MainlineVersionStrategy;
@@ -14,7 +15,6 @@ use crate::calculation::strategies::merge_message::MergeMessageVersionStrategy;
 use crate::calculation::strategies::tagged_commit::TaggedCommitVersionStrategy;
 use crate::calculation::strategies::track_release_branches::TrackReleaseBranchesVersionStrategy;
 use crate::calculation::strategies::version_in_branch_name::VersionInBranchNameStrategy;
-use crate::calculation::strategies::VersionStrategy;
 use crate::config::enums::{DeploymentMode, VersionStrategies};
 use crate::context::GitVersionContext;
 use crate::semver::SemanticVersion;
