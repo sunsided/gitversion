@@ -19,3 +19,39 @@ impl BuildAgent for CodeBuild {
             .unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use once_cell::sync::Lazy;
+
+    use crate::agents::codebuild::CodeBuild;
+    use crate::agents::BuildAgent;
+
+    static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    #[test]
+    fn can_apply_when_codebuild_ci_env_is_set() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("CODEBUILD_CI", "true");
+        }
+
+        let agent = CodeBuild;
+        assert!(agent.can_apply_to_current_context());
+
+        unsafe {
+            std::env::remove_var("CODEBUILD_CI");
+        }
+    }
+
+    #[test]
+    fn set_output_variables_uses_export_format() {
+        let agent = CodeBuild;
+        assert_eq!(
+            agent.set_output_variables("Foo", Some("bar")),
+            vec!["export Foo=bar"]
+        );
+    }
+}

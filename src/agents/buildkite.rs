@@ -22,3 +22,54 @@ impl BuildAgent for BuildKite {
             .unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use once_cell::sync::Lazy;
+
+    use crate::agents::buildkite::BuildKite;
+    use crate::agents::BuildAgent;
+
+    static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    #[test]
+    fn can_apply_when_buildkite_env_is_set() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("BUILDKITE", "true");
+        }
+
+        let agent = BuildKite;
+        assert!(agent.can_apply_to_current_context());
+
+        unsafe {
+            std::env::remove_var("BUILDKITE");
+        }
+    }
+
+    #[test]
+    fn get_current_branch_reads_buildkite_branch() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("BUILDKITE_BRANCH", "main");
+        }
+
+        let agent = BuildKite;
+        assert_eq!(agent.get_current_branch(false).as_deref(), Some("main"));
+
+        unsafe {
+            std::env::remove_var("BUILDKITE_BRANCH");
+        }
+    }
+
+    #[test]
+    fn set_output_variables_uses_meta_data_command() {
+        let agent = BuildKite;
+        assert_eq!(
+            agent.set_output_variables("Foo", Some("bar")),
+            vec!["buildkite-agent meta-data set Foo bar"]
+        );
+    }
+}

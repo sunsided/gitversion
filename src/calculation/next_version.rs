@@ -7,7 +7,6 @@ use crate::calculation::deployment_mode::manual::ManualDeploymentCalculator;
 use crate::calculation::effective_branch::{
     EffectiveBranchConfiguration, EffectiveBranchConfigurationFinder,
 };
-use crate::calculation::strategies::VersionStrategy;
 use crate::calculation::strategies::configured_next_version::ConfiguredNextVersionStrategy;
 use crate::calculation::strategies::fallback::FallbackVersionStrategy;
 use crate::calculation::strategies::mainline::MainlineVersionStrategy;
@@ -15,6 +14,7 @@ use crate::calculation::strategies::merge_message::MergeMessageVersionStrategy;
 use crate::calculation::strategies::tagged_commit::TaggedCommitVersionStrategy;
 use crate::calculation::strategies::track_release_branches::TrackReleaseBranchesVersionStrategy;
 use crate::calculation::strategies::version_in_branch_name::VersionInBranchNameStrategy;
+use crate::calculation::strategies::VersionStrategy;
 use crate::config::enums::{DeploymentMode, VersionStrategies};
 use crate::context::GitVersionContext;
 use crate::semver::SemanticVersion;
@@ -119,6 +119,7 @@ impl NextVersionCalculator {
 mod tests {
     use super::NextVersionCalculator;
     use crate::config::enums::DeploymentMode;
+    use crate::config::enums::VersionStrategies;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::config::workflows;
     use crate::context::GitVersionContext;
@@ -204,5 +205,48 @@ mod tests {
 
         assert_eq!(version.pre_release_tag.name, "alpha");
         assert_eq!(version.pre_release_tag.number, Some(1));
+    }
+
+    #[test]
+    fn find_version_selects_highest_candidate_across_enabled_strategies() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        fixture.branch_to("release/4.5.6").expect("branch");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repository");
+        let config = GitVersionConfiguration {
+            next_version: Some("2.0.0".to_string()),
+            ..GitVersionConfiguration::default()
+        };
+
+        let ctx = GitVersionContext::from_repository(repo, config).expect("build context");
+        let version = NextVersionCalculator
+            .find_version(&ctx)
+            .expect("calculate version");
+
+        assert_eq!(version.major, 4);
+        assert_eq!(version.minor, 5);
+        assert_eq!(version.patch, 6);
+    }
+
+    #[test]
+    fn find_version_uses_fallback_when_no_strategies_are_enabled() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repository");
+        let config = GitVersionConfiguration {
+            version_strategy: VersionStrategies::empty(),
+            ..GitVersionConfiguration::default()
+        };
+
+        let ctx = GitVersionContext::from_repository(repo, config).expect("build context");
+        let version = NextVersionCalculator
+            .find_version(&ctx)
+            .expect("calculate version");
+
+        assert_eq!(version.major, 0);
+        assert_eq!(version.minor, 0);
+        assert_eq!(version.patch, 0);
     }
 }

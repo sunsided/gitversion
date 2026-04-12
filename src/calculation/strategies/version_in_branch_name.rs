@@ -41,6 +41,8 @@ impl VersionStrategy for VersionInBranchNameStrategy {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
     use crate::calculation::strategies::version_in_branch_name::VersionInBranchNameStrategy;
     use crate::calculation::strategies::VersionStrategy;
@@ -49,11 +51,12 @@ mod tests {
     use crate::git::git2_impl::repository::Git2Repository;
     use crate::testing::repository_fixture::RepositoryFixture;
 
-    #[test]
-    fn extracts_version_from_branch_name() {
+    fn strategy_output_for_branch_name(
+        branch_name: &str,
+    ) -> Vec<crate::calculation::base_version::BaseVersion> {
         let mut fixture = RepositoryFixture::new().expect("fixture");
         fixture.make_a_commit("initial commit").expect("commit");
-        fixture.branch_to("release/4.5.6").expect("branch");
+        fixture.branch_to(branch_name).expect("branch");
 
         let repo = Git2Repository::open(fixture.path()).expect("open repository");
         let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
@@ -64,28 +67,30 @@ mod tests {
             .next()
             .expect("effective configuration");
 
-        let versions = VersionInBranchNameStrategy.get_base_versions(&ctx, &effective);
-
-        assert_eq!(versions.len(), 1);
-        assert_eq!(versions[0].operand.semantic_version.to_string(), "4.5.6");
+        VersionInBranchNameStrategy.get_base_versions(&ctx, &effective)
     }
 
-    #[test]
-    fn returns_no_versions_when_branch_has_no_semver() {
-        let mut fixture = RepositoryFixture::new().expect("fixture");
-        fixture.make_a_commit("initial commit").expect("commit");
-        fixture.branch_to("feature/no-version").expect("branch");
+    #[rstest]
+    #[case("release/4.5.6", Some("4.5.6"))]
+    #[case("support/1.2.3-hotfix", Some("1.2.3-hotfix"))]
+    #[case("release/2.0.0-beta", Some("2.0.0-beta"))]
+    #[case("feature/no-version", None)]
+    #[case("feature/1.2", None)]
+    fn extracts_semver_from_branch_name_when_present(
+        #[case] branch_name: &str,
+        #[case] expected: Option<&str>,
+    ) {
+        let versions = strategy_output_for_branch_name(branch_name);
 
-        let repo = Git2Repository::open(fixture.path()).expect("open repository");
-        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
-            .expect("context");
-        let effective = EffectiveBranchConfigurationFinder
-            .get_configurations(&ctx.current_branch, &ctx.configuration)
-            .into_iter()
-            .next()
-            .expect("effective configuration");
+        let actual = versions
+            .first()
+            .map(|version| version.operand.semantic_version.to_string());
+        assert_eq!(actual.as_deref(), expected);
 
-        let versions = VersionInBranchNameStrategy.get_base_versions(&ctx, &effective);
-        assert!(versions.is_empty());
+        if expected.is_some() {
+            assert_eq!(versions.len(), 1);
+        } else {
+            assert!(versions.is_empty());
+        }
     }
 }

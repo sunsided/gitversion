@@ -22,3 +22,57 @@ impl BuildAgent for BitBucketPipelines {
             .unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use once_cell::sync::Lazy;
+
+    use crate::agents::bitbucket::BitBucketPipelines;
+    use crate::agents::BuildAgent;
+
+    static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    #[test]
+    fn can_apply_when_workspace_is_set() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("BITBUCKET_WORKSPACE", "workspace");
+        }
+
+        let agent = BitBucketPipelines;
+        assert!(agent.can_apply_to_current_context());
+
+        unsafe {
+            std::env::remove_var("BITBUCKET_WORKSPACE");
+        }
+    }
+
+    #[test]
+    fn get_current_branch_reads_bitbucket_branch() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("BITBUCKET_BRANCH", "feature/test");
+        }
+
+        let agent = BitBucketPipelines;
+        assert_eq!(
+            agent.get_current_branch(false).as_deref(),
+            Some("feature/test")
+        );
+
+        unsafe {
+            std::env::remove_var("BITBUCKET_BRANCH");
+        }
+    }
+
+    #[test]
+    fn set_output_variables_uses_export_format() {
+        let agent = BitBucketPipelines;
+        assert_eq!(
+            agent.set_output_variables("Foo", Some("bar")),
+            vec!["export Foo=bar"]
+        );
+    }
+}

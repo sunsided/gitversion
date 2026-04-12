@@ -31,4 +31,14 @@ mod tests {
         assert_eq!(calculated.to_string(), "2.0.0");
         assert_eq!(calculated.build_metadata.version_source_distance, 9);
     }
+
+    #[test]
+    fn leaves_release_version_core_unchanged_when_already_release() {
+        let version = SemanticVersion::new(1, 0, 0);
+
+        let calculated = ContinuousDeploymentCalculator.calculate(version, 0);
+
+        assert_eq!(calculated.to_string(), "1.0.0");
+        assert_eq!(calculated.build_metadata.version_source_distance, 0);
+    }
 }

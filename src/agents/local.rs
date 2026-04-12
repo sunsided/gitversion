@@ -18,3 +18,28 @@ impl BuildAgent for LocalBuild {
         Vec::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::agents::local::LocalBuild;
+    use crate::agents::BuildAgent;
+    use crate::output::variables::GitVersionVariables;
+
+    #[test]
+    fn local_build_is_default_and_always_applicable() {
+        let agent = LocalBuild;
+
+        assert!(agent.is_default());
+        assert!(agent.can_apply_to_current_context());
+    }
+
+    #[test]
+    fn local_build_does_not_emit_build_or_variable_commands() {
+        let agent = LocalBuild;
+
+        assert!(agent
+            .set_build_number(&GitVersionVariables::default())
+            .is_none());
+        assert!(agent.set_output_variables("Foo", Some("bar")).is_empty());
+    }
+}

@@ -122,8 +122,8 @@ fn parse_semver_tags_by_commit(ctx: &GitVersionContext) -> HashMap<String, Seman
 #[cfg(test)]
 mod tests {
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
-    use crate::calculation::strategies::VersionStrategy;
     use crate::calculation::strategies::mainline::MainlineVersionStrategy;
+    use crate::calculation::strategies::VersionStrategy;
     use crate::config::gitversion_config::GitVersionConfiguration;
     use crate::context::GitVersionContext;
     use crate::git::git2_impl::repository::Git2Repository;
@@ -168,5 +168,49 @@ mod tests {
         let versions = MainlineVersionStrategy.get_base_versions(&ctx, &effective);
         assert_eq!(versions.len(), 1);
         assert_eq!(versions[0].get_incremented_version().to_string(), "1.2.4");
+    }
+
+    #[test]
+    fn uses_highest_semver_when_multiple_tags_point_to_same_commit() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+        fixture.apply_tag("1.2.3").expect("tag 1.2.3");
+        fixture.apply_tag("1.3.0").expect("tag 1.3.0");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repo");
+        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
+            .expect("context");
+        let effective = EffectiveBranchConfigurationFinder
+            .get_configurations(&ctx.current_branch, &ctx.configuration)
+            .into_iter()
+            .next()
+            .expect("effective configuration");
+
+        let versions = MainlineVersionStrategy.get_base_versions(&ctx, &effective);
+
+        assert_eq!(versions.len(), 1);
+        assert_eq!(versions[0].operand.semantic_version.to_string(), "1.3.0");
+        assert!(versions[0].operator.is_none());
+    }
+
+    #[test]
+    fn falls_back_to_zero_zero_one_when_no_tags_exist() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        fixture.make_a_commit("initial commit").expect("commit");
+
+        let repo = Git2Repository::open(fixture.path()).expect("open repo");
+        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
+            .expect("context");
+        let effective = EffectiveBranchConfigurationFinder
+            .get_configurations(&ctx.current_branch, &ctx.configuration)
+            .into_iter()
+            .next()
+            .expect("effective configuration");
+
+        let versions = MainlineVersionStrategy.get_base_versions(&ctx, &effective);
+
+        assert_eq!(versions.len(), 1);
+        assert_eq!(versions[0].operand.semantic_version.to_string(), "0.0.0");
+        assert_eq!(versions[0].get_incremented_version().to_string(), "0.0.1");
     }
 }

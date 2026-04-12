@@ -41,4 +41,24 @@ mod tests {
 
         assert_eq!(calculated.to_string(), "1.2.3");
     }
+
+    #[test]
+    fn initializes_pre_release_number_to_one_when_missing() {
+        let version = SemanticVersion::parse("1.2.3-alpha", None, SemanticVersionFormat::Strict)
+            .expect("valid semver");
+
+        let calculated = ContinuousDeliveryCalculator.calculate(version, 1);
+
+        assert_eq!(calculated.to_string(), "1.2.3-alpha.1");
+    }
+
+    #[test]
+    fn commit_distance_zero_reduces_pre_release_number_by_one() {
+        let version = SemanticVersion::parse("1.2.3-alpha.3", None, SemanticVersionFormat::Strict)
+            .expect("valid semver");
+
+        let calculated = ContinuousDeliveryCalculator.calculate(version, 0);
+
+        assert_eq!(calculated.to_string(), "1.2.3-alpha.2");
+    }
 }

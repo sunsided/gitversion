@@ -31,6 +31,8 @@ impl VersionStrategy for MergeMessageVersionStrategy {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use crate::calculation::effective_branch::EffectiveBranchConfigurationFinder;
     use crate::calculation::strategies::merge_message::MergeMessageVersionStrategy;
     use crate::calculation::strategies::VersionStrategy;
@@ -39,12 +41,11 @@ mod tests {
     use crate::git::git2_impl::repository::Git2Repository;
     use crate::testing::repository_fixture::RepositoryFixture;
 
-    #[test]
-    fn extracts_version_from_merge_commit_message() {
+    fn strategy_output_for_commit_message(
+        message: &str,
+    ) -> Vec<crate::calculation::base_version::BaseVersion> {
         let mut fixture = RepositoryFixture::new().expect("fixture");
-        fixture
-            .make_a_commit("Merge pull request #42 from release/3.1.0")
-            .expect("commit");
+        fixture.make_a_commit(message).expect("commit");
 
         let repo = Git2Repository::open(fixture.path()).expect("open repository");
         let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
@@ -55,27 +56,30 @@ mod tests {
             .next()
             .expect("effective configuration");
 
-        let versions = MergeMessageVersionStrategy.get_base_versions(&ctx, &effective);
-
-        assert_eq!(versions.len(), 1);
-        assert_eq!(versions[0].operand.semantic_version.to_string(), "3.1.0");
+        MergeMessageVersionStrategy.get_base_versions(&ctx, &effective)
     }
 
-    #[test]
-    fn returns_no_versions_for_non_merge_message() {
-        let mut fixture = RepositoryFixture::new().expect("fixture");
-        fixture.make_a_commit("feat: add search").expect("commit");
+    #[rstest]
+    #[case("Merge pull request #42 from release/3.1.0", Some("3.1.0"))]
+    #[case("Merge branch 'release/4.2.1' into main", Some("4.2.1"))]
+    #[case("Merged PR 456: Merge release/7.8.9 to develop", Some("7.8.9"))]
+    #[case("Merge pull request #100 from feature/add-search", None)]
+    #[case("feat: add search", None)]
+    fn extracts_version_only_when_merge_source_contains_semver(
+        #[case] message: &str,
+        #[case] expected: Option<&str>,
+    ) {
+        let versions = strategy_output_for_commit_message(message);
 
-        let repo = Git2Repository::open(fixture.path()).expect("open repository");
-        let ctx = GitVersionContext::from_repository(repo, GitVersionConfiguration::default())
-            .expect("context");
-        let effective = EffectiveBranchConfigurationFinder
-            .get_configurations(&ctx.current_branch, &ctx.configuration)
-            .into_iter()
-            .next()
-            .expect("effective configuration");
+        let actual = versions
+            .first()
+            .map(|version| version.operand.semantic_version.to_string());
+        assert_eq!(actual.as_deref(), expected);
 
-        let versions = MergeMessageVersionStrategy.get_base_versions(&ctx, &effective);
-        assert!(versions.is_empty());
+        if expected.is_some() {
+            assert_eq!(versions.len(), 1);
+        } else {
+            assert!(versions.is_empty());
+        }
     }
 }

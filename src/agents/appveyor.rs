@@ -25,3 +25,72 @@ impl BuildAgent for AppVeyor {
             .unwrap_or_default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use once_cell::sync::Lazy;
+
+    use crate::agents::appveyor::AppVeyor;
+    use crate::agents::BuildAgent;
+    use crate::output::variables::GitVersionVariables;
+
+    static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    #[test]
+    fn can_apply_when_appveyor_env_is_set() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("APPVEYOR", "true");
+        }
+
+        let agent = AppVeyor;
+        assert!(agent.can_apply_to_current_context());
+
+        unsafe {
+            std::env::remove_var("APPVEYOR");
+        }
+    }
+
+    #[test]
+    fn get_current_branch_reads_appveyor_repo_branch() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        unsafe {
+            std::env::set_var("APPVEYOR_REPO_BRANCH", "release/3.0.0");
+        }
+
+        let agent = AppVeyor;
+        assert_eq!(
+            agent.get_current_branch(false).as_deref(),
+            Some("release/3.0.0")
+        );
+
+        unsafe {
+            std::env::remove_var("APPVEYOR_REPO_BRANCH");
+        }
+    }
+
+    #[test]
+    fn set_output_variables_uses_appveyor_command() {
+        let agent = AppVeyor;
+        assert_eq!(
+            agent.set_output_variables("Foo", Some("bar")),
+            vec!["appveyor SetVariable -Name Foo -Value bar"]
+        );
+    }
+
+    #[test]
+    fn set_build_number_uses_appveyor_update_command() {
+        let vars = GitVersionVariables {
+            full_sem_ver: "4.5.6".to_string(),
+            ..Default::default()
+        };
+
+        let agent = AppVeyor;
+        assert_eq!(
+            agent.set_build_number(&vars).as_deref(),
+            Some("appveyor UpdateBuild -Version 4.5.6")
+        );
+    }
+}
