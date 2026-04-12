@@ -468,6 +468,85 @@ fn develop_scenario_continuous_deployment_strips_alpha_prerelease_tag() {
 }
 
 #[test]
+fn develop_branch_name_prefix_does_not_match_develop_configuration() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("1.0.0").expect("tag");
+    fixture.branch_to("developer").expect("branch developer");
+    fixture.make_a_commit("developer commit").expect("commit");
+
+    let mut config = gitflow_configuration();
+    let unknown = config
+        .branches
+        .get_mut("unknown")
+        .expect("unknown branch configuration");
+    unknown.deployment_mode = Some(DeploymentMode::ContinuousDelivery);
+
+    let version = fixture
+        .calculate_version(config)
+        .expect("calculate version");
+    assert_core(&version, 1, 0, 1);
+    assert_ne!(version.pre_release_tag.name, "alpha");
+}
+
+#[test]
+fn develop_branch_from_tagged_main_uses_minor_bump() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("1.0.0").expect("tag");
+    fixture.branch_to("develop").expect("branch develop");
+
+    let version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate version");
+    assert_core(&version, 1, 1, 0);
+    assert_eq!(version.pre_release_tag.name, "alpha");
+}
+
+#[test]
+fn develop_branch_after_release_merged_to_main_uses_release_as_base() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("1.0.0").expect("tag");
+    let main_branch = current_branch_name(&fixture);
+    fixture.branch_to("develop").expect("develop");
+    fixture.make_a_commit("develop commit").expect("commit");
+    fixture.branch_to("release/2.0.0").expect("release");
+    fixture.make_a_commit("release commit").expect("commit");
+    fixture.checkout(&main_branch).expect("main");
+    fixture.merge_no_ff("release/2.0.0").expect("merge release");
+    fixture.checkout("develop").expect("develop");
+    fixture.merge_no_ff("release/2.0.0").expect("merge release");
+
+    let version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate version");
+    assert_core(&version, 2, 1, 0);
+    assert_eq!(version.pre_release_tag.name, "alpha");
+}
+
+#[test]
+fn develop_branch_with_multiple_release_candidates_uses_highest_version() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("1.0.0").expect("tag");
+    fixture.branch_to("develop").expect("develop");
+    fixture.branch_to("release/3.0.0").expect("release 3");
+    fixture.make_a_commit("release 3 commit").expect("commit");
+    fixture.checkout("develop").expect("develop");
+    fixture.branch_to("release/2.0.0").expect("release 2");
+    fixture.make_a_commit("release 2 commit").expect("commit");
+    fixture.make_a_commit("release 2 commit 2").expect("commit");
+    fixture.checkout("develop").expect("develop");
+
+    let version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate version");
+    assert_core(&version, 3, 1, 0);
+    assert_eq!(version.pre_release_tag.name, "alpha");
+}
+
+#[test]
 fn feature_branch_scenario_from_tagged_main_uses_mainline_base_version() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");

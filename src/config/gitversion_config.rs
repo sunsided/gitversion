@@ -83,9 +83,14 @@ impl Default for GitVersionConfiguration {
 
 impl GitVersionConfiguration {
     pub fn get_branch_configuration(&self, branch: &ReferenceName) -> BranchConfiguration {
+        let friendly = branch.friendly();
+        let without_origin = branch.without_origin();
         self.branches
             .iter()
-            .find(|(key, _)| branch.friendly().contains(key.as_str()))
+            .find(|(key, _)| {
+                branch_key_matches(&friendly, key.as_str())
+                    || branch_key_matches(&without_origin, key.as_str())
+            })
             .map(|(_, cfg)| cfg.clone().inherit(&self.branch_defaults))
             .unwrap_or_else(|| self.get_fallback_branch_configuration())
     }
@@ -97,6 +102,19 @@ impl GitVersionConfiguration {
             .unwrap_or_default()
             .inherit(&self.branch_defaults)
     }
+}
+
+fn branch_key_matches(branch_name: &str, key: &str) -> bool {
+    branch_name.match_indices(key).any(|(start, _)| {
+        let end = start + key.len();
+        let left_ok = start == 0 || is_boundary(branch_name.as_bytes()[start - 1] as char);
+        let right_ok = end == branch_name.len() || is_boundary(branch_name.as_bytes()[end] as char);
+        left_ok && right_ok
+    })
+}
+
+fn is_boundary(ch: char) -> bool {
+    matches!(ch, '/' | '-' | '_' | '.')
 }
 
 #[cfg(test)]
@@ -249,6 +267,30 @@ mod tests {
 
         assert_eq!(resolved.label.as_deref(), Some("default-label"));
         assert_eq!(resolved.track_merge_message, Some(false));
+    }
+
+    #[test]
+    fn get_branch_configuration_does_not_treat_developer_as_develop() {
+        let mut config = GitVersionConfiguration::default();
+        config.branches.insert(
+            "develop".to_string(),
+            BranchConfiguration {
+                label: Some("alpha".to_string()),
+                ..Default::default()
+            },
+        );
+        config.branches.insert(
+            "unknown".to_string(),
+            BranchConfiguration {
+                label: Some("fallback".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let branch = ReferenceName::from_branch_name("developer");
+        let resolved = config.get_branch_configuration(&branch);
+
+        assert_eq!(resolved.label.as_deref(), Some("fallback"));
     }
 
     #[test]
