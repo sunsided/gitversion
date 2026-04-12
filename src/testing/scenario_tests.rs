@@ -164,6 +164,34 @@ fn pull_request_scenario_applies_pr_label() {
 }
 
 #[test]
+fn pull_request_branch_inherits_develop_increment_when_targeting_develop() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("0.1.0").expect("tag");
+    fixture.branch_to("develop").expect("develop");
+    fixture.make_a_commit("develop commit").expect("commit");
+    fixture.branch_to("feature/foo").expect("feature");
+    fixture.make_a_commit("feature commit").expect("commit");
+    fixture.checkout("develop").expect("develop");
+    fixture.branch_to("pull-request/44").expect("pull request");
+    fixture.merge_no_ff("feature/foo").expect("merge feature");
+
+    let mut config = gitflow_configuration();
+    let pull_request = config
+        .branches
+        .get_mut("pull-request")
+        .expect("pull-request branch configuration");
+    pull_request.label = Some("PullRequest44".to_string());
+    pull_request.deployment_mode = Some(DeploymentMode::ContinuousDelivery);
+
+    let version = fixture
+        .calculate_version(config)
+        .expect("calculate version");
+    assert_core(&version, 0, 2, 0);
+    assert_eq!(version.pre_release_tag.name, "PullRequest44");
+}
+
+#[test]
 fn mainline_development_scenario_increments_patch_after_tag() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -271,6 +299,33 @@ fn support_branch_scenario_uses_version_in_branch_name() {
     fixture
         .assert_full_semver(&expected, config)
         .expect("version assertion");
+}
+
+#[test]
+fn support_branch_created_from_older_tag_keeps_support_line_version() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("1.0.0").expect("tag 1.0.0");
+    fixture.make_a_commit("main commit 2").expect("commit");
+    fixture.apply_tag("1.1.0").expect("tag 1.1.0");
+    fixture.make_a_commit("main commit 3").expect("commit");
+    fixture.apply_tag("2.0.0").expect("tag 2.0.0");
+
+    fixture
+        .branch_to_from("support/1.1.0", "1.1.0")
+        .expect("support branch from old tag");
+    let support_version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate support version");
+    assert_core(&support_version, 1, 1, 0);
+
+    fixture.branch_to("hotfix/1.1.1").expect("hotfix branch");
+    fixture.make_a_commit("hotfix commit").expect("commit");
+
+    let hotfix_version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate hotfix version");
+    assert_core(&hotfix_version, 1, 1, 1);
 }
 
 #[test]
@@ -445,6 +500,24 @@ fn hotfix_branch_scenario_continuous_delivery_keeps_release_version_without_labe
     fixture
         .assert_full_semver(&expected, config)
         .expect("version assertion");
+}
+
+#[test]
+fn hotfix_branch_from_release_branch_uses_hotfix_branch_version() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture.apply_tag("4.20.4").expect("tag");
+    fixture.branch_to("develop").expect("develop");
+    fixture.make_a_commit("develop commit").expect("commit");
+    fixture.branch_to("release/4.21.1").expect("release");
+    fixture.make_a_commit("release commit").expect("commit");
+    fixture.branch_to("hotfix/4.21.1").expect("hotfix");
+    fixture.make_a_commit("hotfix commit").expect("commit");
+
+    let version = fixture
+        .calculate_version(gitflow_configuration())
+        .expect("calculate version");
+    assert_core(&version, 4, 21, 1);
 }
 
 #[test]

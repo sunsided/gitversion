@@ -89,6 +89,19 @@ impl RepositoryFixture {
         Ok(())
     }
 
+    pub fn branch_to_from(&mut self, branch_name: &str, from_ref: &str) -> Result<()> {
+        let object = self.repo.revparse_single(from_ref)?;
+        let commit = object.peel_to_commit()?;
+        self.repo.branch(branch_name, &commit, true)?;
+
+        let reference_name = format!("refs/heads/{branch_name}");
+        self.repo.set_head(&reference_name)?;
+        self.repo
+            .checkout_head(Some(CheckoutBuilder::default().safe()))?;
+
+        Ok(())
+    }
+
     pub fn checkout(&mut self, branch_name: &str) -> Result<()> {
         let reference_name = format!("refs/heads/{branch_name}");
         self.repo.set_head(&reference_name)?;
@@ -230,6 +243,28 @@ mod tests {
             .unwrap_or_default()
             .to_string();
         assert!(head_name.ends_with(&initial_branch));
+    }
+
+    #[test]
+    fn branch_to_from_creates_branch_from_tagged_commit() {
+        let mut fixture = RepositoryFixture::new().expect("fixture");
+        let first = fixture.make_a_commit("first commit").expect("commit");
+        fixture.apply_tag("1.1.0").expect("tag");
+        fixture.make_a_commit("second commit").expect("commit");
+
+        fixture
+            .branch_to_from("support/1.1.0", "1.1.0")
+            .expect("branch from tag");
+
+        let support_tip = fixture
+            .repo
+            .find_branch("support/1.1.0", git2::BranchType::Local)
+            .expect("support branch")
+            .get()
+            .target()
+            .expect("support tip")
+            .to_string();
+        assert_eq!(support_tip, first);
     }
 
     #[test]
