@@ -34,8 +34,20 @@ pub fn defaults() -> HashMap<String, BranchConfiguration> {
             ..Default::default()
         },
     );
-    map.insert("feature".to_string(), BranchConfiguration::default());
-    map.insert("pull-request".to_string(), BranchConfiguration::default());
+    map.insert(
+        "feature".to_string(),
+        BranchConfiguration {
+            increment: Some(IncrementStrategy::Inherit),
+            ..Default::default()
+        },
+    );
+    map.insert(
+        "pull-request".to_string(),
+        BranchConfiguration {
+            increment: Some(IncrementStrategy::Inherit),
+            ..Default::default()
+        },
+    );
     map.insert("hotfix".to_string(), BranchConfiguration::default());
     map.insert("support".to_string(), BranchConfiguration::default());
     map.insert("unknown".to_string(), BranchConfiguration::default());
@@ -102,7 +114,7 @@ mod tests {
         let branches = gitflow::defaults();
         let feature = branches.get("feature").expect("feature branch exists");
 
-        assert!(feature.increment.is_none());
+        assert_eq!(feature.increment, Some(IncrementStrategy::Inherit));
         assert!(feature.label.is_none());
         assert!(feature.is_main_branch.is_none());
         assert!(feature.is_release_branch.is_none());

@@ -491,7 +491,6 @@ fn feature_branch_scenario_from_tagged_main_uses_mainline_base_version() {
 }
 
 #[test]
-#[ignore = "requires feature-parent increment inheritance parity"]
 fn feature_branch_inherits_increment_with_multiple_possible_parents() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -527,7 +526,6 @@ fn feature_branch_inherits_increment_with_multiple_possible_parents() {
 }
 
 #[test]
-#[ignore = "requires feature-parent increment inheritance parity"]
 fn feature_branch_after_fast_forward_merge_inherits_correctly() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -622,7 +620,6 @@ fn feature_branch_long_running_with_develop_merge() {
 }
 
 #[test]
-#[ignore = "requires release-to-feature version inheritance parity"]
 fn feature_branch_from_release_uses_branch_name_version() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -672,7 +669,6 @@ fn feature_branch_configurable_label_with_regex_captures() {
 }
 
 #[test]
-#[ignore = "requires release-finish develop inheritance parity"]
 fn feature_branch_after_release_finish_inherits_from_main_tag() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -707,7 +703,6 @@ fn feature_branch_after_release_finish_inherits_from_main_tag() {
 }
 
 #[test]
-#[ignore = "requires track-release-branches inheritance on feature branches"]
 fn feature_branch_picks_up_version_after_release_branch_created() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -734,7 +729,6 @@ fn feature_branch_picks_up_version_after_release_branch_created() {
 }
 
 #[test]
-#[ignore = "requires track-release-branches inheritance on feature branches"]
 fn feature_branch_picks_up_version_after_release_merged_back() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -792,7 +786,6 @@ fn feature_branch_has_greater_semver_after_develop_merged_into_feature() {
 }
 
 #[test]
-#[ignore = "requires release merge precedence parity on develop"]
 fn release_branch_no_merge_backs_when_no_changes() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");
@@ -840,7 +833,6 @@ fn release_branch_merge_to_main_carries_version() {
 }
 
 #[test]
-#[ignore = "requires highest release precedence parity on develop"]
 fn release_branch_highest_version_wins_with_multiple_releases() {
     let mut fixture = RepositoryFixture::new().expect("fixture");
     fixture.make_a_commit("initial commit").expect("commit");

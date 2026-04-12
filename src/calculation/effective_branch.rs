@@ -20,9 +20,39 @@ impl EffectiveBranchConfigurationFinder {
         let mut current = config.get_branch_configuration(&branch.name);
         if current.increment == Some(IncrementStrategy::Inherit) {
             current = current.inherit(&config.branch_defaults);
+            current.increment = resolve_inherited_increment(branch, config);
         }
         vec![EffectiveBranchConfiguration { branch: current }]
     }
+}
+
+fn resolve_inherited_increment(
+    branch: &Git2Branch,
+    config: &GitVersionConfiguration,
+) -> Option<IncrementStrategy> {
+    let friendly = branch.name.friendly();
+    let preferred_parent =
+        if friendly.starts_with("feature/") || friendly.starts_with("pull-request/") {
+            "develop"
+        } else if friendly.starts_with("hotfix/") || friendly.starts_with("support/") {
+            "main"
+        } else {
+            "main"
+        };
+
+    let fallback_parent = if preferred_parent == "develop" {
+        Some("main")
+    } else {
+        None
+    };
+
+    config
+        .branches
+        .get(preferred_parent)
+        .or_else(|| fallback_parent.and_then(|name| config.branches.get(name)))
+        .map(|parent| parent.clone().inherit(&config.branch_defaults))
+        .and_then(|parent| parent.increment)
+        .or(config.branch_defaults.increment)
 }
 
 #[cfg(test)]
@@ -66,8 +96,35 @@ mod tests {
             .pop()
             .expect("effective branch config");
 
-        assert_eq!(effective.branch.increment, Some(IncrementStrategy::Inherit));
+        assert_eq!(effective.branch.increment, Some(IncrementStrategy::Minor));
         assert_eq!(effective.branch.label.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn feature_inherit_uses_main_increment_when_develop_is_missing() {
+        let mut config = GitVersionConfiguration::default();
+        config.branch_defaults.increment = Some(IncrementStrategy::Patch);
+        config.branches.insert(
+            "main".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Major),
+                ..Default::default()
+            },
+        );
+        config.branches.insert(
+            "feature".to_string(),
+            BranchConfiguration {
+                increment: Some(IncrementStrategy::Inherit),
+                ..Default::default()
+            },
+        );
+
+        let effective = EffectiveBranchConfigurationFinder
+            .get_configurations(&branch("feature/calc"), &config)
+            .pop()
+            .expect("effective branch config");
+
+        assert_eq!(effective.branch.increment, Some(IncrementStrategy::Major));
     }
 
     #[test]
