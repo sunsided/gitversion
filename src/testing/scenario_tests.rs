@@ -166,3 +166,113 @@ fn mainline_development_scenario_increments_patch_after_tag() {
         .assert_full_semver(&expected, config)
         .expect("version assertion");
 }
+
+#[test]
+fn continuous_delivery_scenario_uses_configured_next_version_with_main_ci_label() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    if current_branch_name(&fixture) != "main" {
+        fixture.branch_to("main").expect("switch to main");
+    }
+
+    let mut config = gitflow_configuration();
+    config.next_version = Some("1.0.0".to_string());
+    let main = config
+        .branches
+        .get_mut("main")
+        .expect("main branch configuration");
+    main.label = Some("ci".to_string());
+    main.deployment_mode = Some(DeploymentMode::ContinuousDelivery);
+    let expected = expected_full_semver("1.0.0-ci.1", &fixture, "main");
+
+    fixture
+        .assert_full_semver(&expected, config)
+        .expect("version assertion");
+}
+
+#[test]
+fn continuous_delivery_scenario_prefers_higher_tag_over_next_version() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    if current_branch_name(&fixture) != "main" {
+        fixture.branch_to("main").expect("switch to main");
+    }
+    fixture.make_a_commit("release commit").expect("commit");
+    fixture.apply_tag("1.1.0").expect("apply tag");
+
+    let mut config = gitflow_configuration();
+    config.next_version = Some("1.0.0".to_string());
+    let main = config
+        .branches
+        .get_mut("main")
+        .expect("main branch configuration");
+    main.deployment_mode = Some(DeploymentMode::ContinuousDelivery);
+    let expected = expected_full_semver("1.1.0", &fixture, "main");
+
+    fixture
+        .assert_full_semver(&expected, config)
+        .expect("version assertion");
+}
+
+#[test]
+fn gitflow_scenario_merge_message_uses_release_branch_version_on_main() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    let main_branch = current_branch_name(&fixture);
+    fixture
+        .branch_to("release/2.0.0")
+        .expect("switch to release branch");
+    fixture.make_a_commit("release hardening").expect("commit");
+    fixture
+        .checkout(&main_branch)
+        .expect("switch back to main branch");
+    fixture
+        .merge("release/2.0.0", "Merge branch 'release/2.0.0' into main")
+        .expect("merge release branch");
+
+    let config = gitflow_configuration();
+    let expected = expected_full_semver("2.0.0", &fixture, &main_branch);
+
+    fixture
+        .assert_full_semver(&expected, config)
+        .expect("version assertion");
+}
+
+#[test]
+fn support_branch_scenario_uses_version_in_branch_name() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture
+        .branch_to("support/1.5.0")
+        .expect("switch to support branch");
+    fixture.make_a_commit("support patch").expect("commit");
+
+    let config = gitflow_configuration();
+    let expected = expected_full_semver("1.5.0", &fixture, "support/1.5.0");
+
+    fixture
+        .assert_full_semver(&expected, config)
+        .expect("version assertion");
+}
+
+#[test]
+fn release_branch_scenario_continuous_deployment_strips_prerelease_tag() {
+    let mut fixture = RepositoryFixture::new().expect("fixture");
+    fixture.make_a_commit("initial commit").expect("commit");
+    fixture
+        .branch_to("release/4.0.0")
+        .expect("switch to release branch");
+    fixture.make_a_commit("release prep").expect("commit");
+
+    let mut config = gitflow_configuration();
+    let release = config
+        .branches
+        .get_mut("release")
+        .expect("release branch configuration");
+    release.deployment_mode = Some(DeploymentMode::ContinuousDeployment);
+    let expected = expected_full_semver("4.0.0", &fixture, "release/4.0.0");
+
+    fixture
+        .assert_full_semver(&expected, config)
+        .expect("version assertion");
+}
